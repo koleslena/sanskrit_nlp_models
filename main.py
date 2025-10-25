@@ -6,8 +6,9 @@ from torch.nn import functional as F
 from common.datasets_util import get_pos_datasets, Datasources
 from common.model_trainer import Trainer
 from pos_taggers.cnn_pos_tagger import get_cnn_model, get_model_name
-from common.pos_tagger import POSTagger
+from sanskrit_tagger.pos_tagger import POSTagger
 
+_train = False
 
 test_pos_sentences = [
     'atha kanyā pradāne sa tam eva arthaṁ vicintayan',
@@ -34,22 +35,25 @@ def main():
                                 [Datasources.HITOPADESHA], 
                                 full_pos=args.full_pos)
 
+    datasets.save_data()
+
     if args.model == 'cnn':
         model = get_cnn_model(datasets.vocab_size, datasets.labels_num, embedding_size=args.embedding_size)
         model_name = get_model_name(full_pos=args.full_pos)
 
-    trainer = Trainer(datasets, model,
-                      F.cross_entropy, 
-                      output_model_name=model_name, 
-                      device=args.device,
-                      lr=5e-3,
-                      epoch_n=args.epoch_n,
-                      early_stopping_patience=5,
-                      max_batches_per_epoch_train=args.max_batches_per_epoch_train,
-                      max_batches_per_epoch_val=args.max_batches_per_epoch_val,
-                      lr_scheduler_ctor=lambda optim: torch.optim.lr_scheduler.ReduceLROnPlateau(optim, patience=2, factor=0.5))
+    if _train:
+        trainer = Trainer(datasets, model,
+                        F.cross_entropy, 
+                        output_model_name=model_name, 
+                        device=args.device,
+                        lr=5e-3,
+                        epoch_n=args.epoch_n,
+                        early_stopping_patience=5,
+                        max_batches_per_epoch_train=args.max_batches_per_epoch_train,
+                        max_batches_per_epoch_val=args.max_batches_per_epoch_val,
+                        lr_scheduler_ctor=lambda optim: torch.optim.lr_scheduler.ReduceLROnPlateau(optim, patience=2, factor=0.5))
 
-    trainer.train()
+        trainer.train()
 
     model.load_state_dict(torch.load(f'output/{model_name}.pth'))
 

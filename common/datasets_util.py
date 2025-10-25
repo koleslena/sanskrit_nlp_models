@@ -1,4 +1,7 @@
 import os
+from os.path import join, exists
+import pickle
+from os import mkdir
 
 from torch.utils.data import DataLoader
 from torch.utils.data import TensorDataset
@@ -102,11 +105,11 @@ def get_pos_datasets(train_texts, val_texts, full_pos=False, **kwargs):
     val_inputs, val_labels = pos_corpus_to_tensor(df_val_clean[['sent', 'id', 'form', pos]], char2id, label2id, val_sent_count, max_sent_len, max_origin_token_len)
     val_dataset = TensorDataset(val_inputs, val_labels)
 
-    return Datasets(train_dataset, val_dataset, char2id, len(label2id),max_sent_len, max_origin_token_len, unique_tags, **kwargs)
+    return Datasets(train_dataset, val_dataset, char2id, max_sent_len, max_origin_token_len, unique_tags, **kwargs)
 
 class Datasets():
     def __init__(self, train_dataset, val_dataset, 
-                 char2id, labels_num,
+                 char2id,
                  max_sent_len,
                  max_origin_token_len,
                  unique_tags,
@@ -115,15 +118,23 @@ class Datasets():
                  dataloader_workers_n=0,
                  batch_size=64):
         
-        self.unique_tags = unique_tags
         self.max_sent_len = max_sent_len
         self.max_origin_token_len = max_origin_token_len
+        self.unique_tags = unique_tags
         self.char2id = char2id
         self.vocab_size = len(char2id)
-        self.labels_num = labels_num
+        self.labels_num = len(unique_tags)
 
         self.train_dataloader = data_loader(train_dataset, batch_size=batch_size, shuffle=shuffle_train,
                                             num_workers=dataloader_workers_n)
         self.val_dataloader = data_loader(val_dataset, batch_size=batch_size, shuffle=False,
                                         num_workers=dataloader_workers_n)
         
+    def save_data(self, output_path='output'):
+        if not exists(output_path):
+            mkdir(output_path)
+        with open(join(output_path, f'unique_tags_{self.vocab_size}_{self.labels_num}.dat'), 'wb') as file:
+            pickle.dump(self.unique_tags, file)
+
+        with open(join(output_path, f'char2id_{self.vocab_size}_{self.labels_num}.dat'), 'wb') as file:
+            pickle.dump(self.char2id, file)

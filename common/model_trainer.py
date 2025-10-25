@@ -6,7 +6,7 @@ import torch
 from tqdm import tqdm
 import copy
 
-from common.device_util import get_device, copy_data_to_device
+from sanskrit_tagger.pos_tagger import get_device, copy_data_to_device
 
 
 class Trainer:
@@ -144,8 +144,12 @@ class Trainer:
     def _save_best_model(self):
         if not exists(self.output_path):
             mkdir(self.output_path)
+        
         torch.save(self.model.state_dict(), join(self.output_path, f'{self.output_model_name}.pth'))
+
         data = arr.array('i', [self.datasets.vocab_size, self.datasets.labels_num])
         with open(join(self.output_path, f'{self.output_model_name}_data.dat'), 'wb') as f:
             data.tofile(f)
+        
+        self.datasets.save_data(self.output_path)
     
