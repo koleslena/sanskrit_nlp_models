@@ -44,13 +44,14 @@ class CNNPOSTagger(nn.Module):
         logits = logits.permute(0, 2, 1)  # BatchSize x LabelsNum x MaxSentenceLen
         return logits
     
-def get_cnn_model(vocab_size, labels_num, embedding_size=64, kernel_size=3, layers_n=3, dropout=0.3):
+def get_model(vocab_size, labels_num, embedding_size=64, kernel_size=3, layers_n=3, dropout=0.3):
     cnn_pos_tagger_model = CNNPOSTagger(vocab_size,
                                         labels_num, 
                                         embedding_size=embedding_size, 
                                         kernel_size=kernel_size, 
                                         layers_n=layers_n, 
                                         dropout=dropout)
+    print(f'CNN: vocab_size: {vocab_size}, labels_num: {labels_num}')
     print('Количество параметров', sum(np.prod(t.shape) for t in cnn_pos_tagger_model.parameters()))
     return cnn_pos_tagger_model
 

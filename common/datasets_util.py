@@ -7,6 +7,8 @@ from torch.utils.data import DataLoader
 from torch.utils.data import TensorDataset
 from enum import Enum
 
+from sklearn.model_selection import train_test_split
+
 from common.vocab_util import build_vocabulary, pos_corpus_to_tensor
 from common.conllu_util import get_files_conllu, read_conllu_file
 
@@ -62,6 +64,48 @@ def get_sent_for_pos(df, sents_count):
     
     return df.apply(lambda row: calc(row), axis=1)
 
+def get_split_pos_datasets(all_texts, full_pos=False, **kwargs):
+
+    files = [file for text in all_texts for file in get_files_conllu(f"{_TEXTS_DIR}/{text}/")]
+
+    df, sentences, all_tokens = read_conllu_file(files)
+
+    sent_count = len(sentences)
+
+    sentences_splited = [' '.join([s['form'] for s in sent if str(s['id']).isdigit()]) for sent in sentences]
+
+    all_tokens_clean = [(token['form'], token['upos'], token['feats']) for token in all_tokens if str(token['id']).isdigit()]
+
+    df_clean = df[df['upos'] != '_']
+    df_clean = df_clean.reset_index()
+
+    df_clean['sent'] = get_sent_for_pos(df_clean, sent_count)
+
+    max_sent_len = max(len(sent) for sent in sentences_splited)
+    max_origin_token_len = max(len(token[0]) for token in all_tokens_clean)
+
+    char_tokenized = [list(sent) for sent in sentences_splited]
+
+    char2id, _ = build_vocabulary(char_tokenized, max_doc_freq=1.0, min_count=5, pad_word='<PAD>')
+
+    pos = 'upos'
+
+    if full_pos:
+        pos = 'pos'
+        df_clean['pos'] = df_clean.apply(lambda row: get_info(row).rstrip(), axis=1)
+
+    unique_tags = ['<NOTAG>'] + sorted(df_clean[pos].value_counts().index)
+    label2id = {label: i for i, label in enumerate(unique_tags)}
+
+    inputs, labels = pos_corpus_to_tensor(df_clean[['sent', 'id', 'form', pos]], char2id, label2id, sent_count, max_sent_len, max_origin_token_len)
+
+    X_train, X_val, y_train, y_val = train_test_split(inputs, labels, test_size=0.2, random_state=42)
+
+    train_dataset = TensorDataset(X_train, y_train)
+    val_dataset = TensorDataset(X_val, y_val)
+
+    return Datasets(train_dataset, val_dataset, char2id, max_sent_len, max_origin_token_len, unique_tags, **kwargs)
+
 def get_pos_datasets(train_texts, val_texts, full_pos=False, **kwargs):
     train_files = [text for texts in train_texts for text in get_files_conllu(f"{_TEXTS_DIR}/{texts}/")]
     val_files = [text for texts in val_texts for text in get_files_conllu(f"{_TEXTS_DIR}/{texts}/")]
@@ -78,6 +122,8 @@ def get_pos_datasets(train_texts, val_texts, full_pos=False, **kwargs):
 
     df_train_clean = train_df[train_df['upos'] != '_']
     df_val_clean = val_df[val_df['upos'] != '_']
+    df_train_clean = df_train_clean.reset_index()
+    df_val_clean = df_val_clean.reset_index()
 
     df_train_clean['sent'] = get_sent_for_pos(df_train_clean, train_sent_count)
     df_val_clean['sent'] = get_sent_for_pos(df_val_clean, val_sent_count)

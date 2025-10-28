@@ -96,7 +96,7 @@ class Trainer:
                 pred = self.model(batch_x)
                 loss = self.criterion(pred, batch_y)
 
-                mean_val_loss += float(loss)
+                mean_val_loss += loss.item()
                 val_batches_n += 1
 
         mean_val_loss /= val_batches_n
