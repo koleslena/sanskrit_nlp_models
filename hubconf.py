@@ -1,3 +1,4 @@
+import os
 import requests
 import array as arr
 
@@ -22,7 +23,8 @@ def cnn_pos_tagger_model(**kwargs):
 		data.frombytes(file_content)
 
 	model = cnn_pos_tagger.get_cnn_model(data[0], data[1], **kwargs)
-	model.load_state_dict(torch.load(f'output/{model_name}.pth'))
+	abs_path = os.path.dirname(os.path.abspath(__file__))
+	model.load_state_dict(torch.load(os.path.join(abs_path, f'output/{model_name}.pth')))
 	return model
 
 def cnn_full_pos_tagger_model(**kwargs):
@@ -39,7 +41,8 @@ def cnn_full_pos_tagger_model(**kwargs):
 		data.frombytes(file_content)
 
 	model = cnn_pos_tagger.get_model(data[0], data[1], **kwargs)
-	model.load_state_dict(torch.load(f'output/{model_name}.pth'))
+	abs_path = os.path.dirname(os.path.abspath(__file__))
+	model.load_state_dict(torch.load(os.path.join(abs_path, f'output/{model_name}.pth')))
 	return model
 
 
@@ -57,7 +60,8 @@ def bilstm_full_pos_tagger_model(**kwargs):
 		data.frombytes(file_content)
 
 	model = bilstm_pos_tagger.get_model(data[0], data[1], **kwargs)
-	model.load_state_dict(torch.load(f'output/{model_name}.pth'))
+	abs_path = os.path.dirname(os.path.abspath(__file__))
+	model.load_state_dict(torch.load(os.path.join(abs_path, f'output/{model_name}.pth')))
 	return model
 
 def main():
