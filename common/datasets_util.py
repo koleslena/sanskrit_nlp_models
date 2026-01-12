@@ -20,6 +20,9 @@ class Datasources(str, Enum):
     RAMAYANA = 'Rāmāyaṇa'
     HITOPADESHA = 'Hitopadeśa'
     AMARAKOSHA = 'Amarakośa'
+    VISHNUPURANA = "Viṣṇupurāṇa"
+    BHAGAVATAPURANA = "Bhāgavatapurāṇa"
+    SHIVAPURANA = "Śivapurāṇa"
 
 def get_info(row):
     if row['feats']:

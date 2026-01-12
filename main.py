@@ -28,17 +28,26 @@ def main():
     parser.add_argument("--labels_num", type=int, default=734) 
     parser.add_argument("--max_batches_per_epoch_train", type=int, default=400)
     parser.add_argument("--max_batches_per_epoch_val", type=int, default=100)
-    parser.add_argument("--epoch_n", type=int, default=10)
+    parser.add_argument("--epoch_n", type=int, default=50)
     parser.add_argument("--embedding_size", type=int, default=64)
     parser.add_argument("--device", type=str, default='cpu')
     parser.add_argument("--model", type=str, default='bilstm') # bilstm, cnn
     parser.add_argument("--full_pos", type=bool, default=True)
+    parser.add_argument("--with_metrics", type=bool, default=True)
     args = parser.parse_args()
 
     model_name = cnn_pos_tagger.get_model_name(full_pos=args.full_pos) if args.model == 'cnn' else bilstm_pos_tagger.get_model_name(full_pos=args.full_pos)
 
     if _train:
-        datasets = get_split_pos_datasets([Datasources.MAHABHARATA, Datasources.RAMAYANA, Datasources.AMARAKOSHA, Datasources.HITOPADESHA], 
+        datasets = get_split_pos_datasets([
+                                            Datasources.MAHABHARATA, 
+                                           Datasources.RAMAYANA, 
+                                           Datasources.AMARAKOSHA, 
+                                           Datasources.HITOPADESHA, 
+                                           Datasources.SHIVAPURANA, 
+                                           Datasources.BHAGAVATAPURANA, 
+                                           Datasources.VISHNUPURANA
+                                           ], 
                             full_pos=args.full_pos)
         
         if args.model == 'cnn':
@@ -50,6 +59,7 @@ def main():
                         F.cross_entropy, 
                         output_model_name=model_name, 
                         device=args.device,
+                        with_metrics=args.with_metrics,
                         lr=5e-4,
                         epoch_n=args.epoch_n,
                         early_stopping_patience=5,
@@ -76,4 +86,5 @@ def main():
 
 
 if __name__ == "__main__":
+    _train = True
     main()

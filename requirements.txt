@@ -3,5 +3,5 @@ pandas
 numpy
 tqdm
 conllu
-StrEnum
+matplotlib
 requests

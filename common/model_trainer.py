@@ -1,6 +1,7 @@
 from os.path import join, exists
 from os import mkdir
 import array as arr
+import time
 
 import torch
 from tqdm import tqdm
@@ -17,6 +18,8 @@ class Trainer:
                  output_model_name='model', 
                  lr=1e-4, epoch_n=10,
                  device=None, 
+                 with_metrics=True,
+                 metrics_path='metrics',
                  early_stopping_patience=10, 
                  l2_reg_alpha=0,
                  max_batches_per_epoch_train=10000,
@@ -39,6 +42,16 @@ class Trainer:
         self.max_batches_per_epoch_val = max_batches_per_epoch_val
         self.optimizer_ctor = optimizer_ctor
         self.lr_scheduler_ctor = lr_scheduler_ctor
+        self.with_metrics = with_metrics
+        self.metrics_path = metrics_path
+
+        if self.with_metrics:
+            if not exists(self.metrics_path):
+                mkdir(self.metrics_path)
+            current_path = join(self.metrics_path, f'{self.output_model_name}_metrics_{time.time()}')
+            if not exists(current_path):
+                mkdir(current_path)
+            self.current_path = current_path
 
         if self.optimizer_ctor is None:
             self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.lr, weight_decay=self.l2_reg_alpha)
@@ -125,6 +138,9 @@ class Trainer:
             mean_val_loss = self._val()
             print('Среднее значение функции потерь на валидации', mean_val_loss)
 
+            if self.with_metrics:
+                self._save_metrics(mean_train_loss, mean_val_loss)
+
             if mean_val_loss < self.best_val_loss:
                 best_epoch_i = epoch
                 self.best_val_loss = mean_val_loss
@@ -153,3 +169,9 @@ class Trainer:
         
         self.datasets.save_data(self.output_path)
     
+
+    def _save_metrics(self, train_loss, val_loss):
+        with open(join(self.current_path, f'{self.output_model_name}_metrics_train.dat'), 'a') as f:
+            f.write(f"{train_loss}\n")
+        with open(join(self.current_path, f'{self.output_model_name}_metrics_val.dat'), 'a') as f:
+            f.write(f"{val_loss}\n")
