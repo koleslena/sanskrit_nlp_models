@@ -1,7 +1,10 @@
 torch
 pandas
 numpy
+scikit-learn
 tqdm
 conllu
 matplotlib
 requests
+
+sanskrit_tagger>=0.1.6

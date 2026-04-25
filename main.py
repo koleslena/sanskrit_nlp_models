@@ -13,8 +13,8 @@ from sanskrit_tagger.tagger_factory import get_pos_tagger
 
 from auto_push import git_push_results
 
-_train = False
-_push = False
+_train = True
+_push = True
 
 test_pos_sentences = [
     'atha kanyā pradāne sa tam eva arthaṁ vicintayan',
@@ -95,6 +95,6 @@ def main():
 
 if __name__ == "__main__":
     _train = True
-    main()
+    # main()
     if _push:
         git_push_results()

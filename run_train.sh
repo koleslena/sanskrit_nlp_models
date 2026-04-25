@@ -1,4 +1,5 @@
 # Установка зависимостей
+pip install --upgrade pip
 pip install -r requirements.txt
 
 # Запуск обучения в фоновом режиме

@@ -7,7 +7,8 @@ def git_push_results():
         subprocess.run(["git", "add", "."], check=True)
         
         # 2. Формируем сообщение коммита с датой и временем
-        commit_msg = f"Auto-save results: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+        # commit_msg = f"Auto-save results: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+        commit_msg = f"test commit Auto-save results: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
         subprocess.run(["git", "commit", "-m", commit_msg], check=True)
         
         # 3. Пушим в репозиторий
