@@ -146,6 +146,7 @@ class Trainer:
                 self.best_val_loss = mean_val_loss
                 self.best_model = copy.deepcopy(self.model)
                 print('Новая лучшая модель!')
+                torch.save(self.best_model.state_dict(), join(self.output_path, f'{self.output_model_name}_tmp.pth'))
             elif epoch - best_epoch_i > self.early_stopping_patience:
                 print('Модель не улучшилась за последние {} эпох, прекращаем обучение'.format(
                     self.early_stopping_patience))
