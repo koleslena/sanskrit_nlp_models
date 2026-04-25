@@ -4,6 +4,7 @@ import torch
 from torch.nn import functional as F
 
 from common.datasets_util import get_pos_datasets, get_split_pos_datasets, Datasources
+from common.loss import FocalLoss
 from common.model_trainer import Trainer
 from pos_taggers import cnn_pos_tagger
 from pos_taggers import bilstm_pos_tagger
@@ -56,7 +57,7 @@ def main():
             model = bilstm_pos_tagger.get_model(datasets.vocab_size, datasets.labels_num, embedding_size=args.embedding_size)
 
         trainer = Trainer(datasets, model,
-                        F.cross_entropy, 
+                        FocalLoss(gamma=2), 
                         output_model_name=model_name, 
                         device=args.device,
                         with_metrics=args.with_metrics,
