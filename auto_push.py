@@ -12,7 +12,7 @@ def git_push_results():
         subprocess.run(["git", "commit", "-m", commit_msg], check=True)
         
         # 3. Пушим в репозиторий
-        subprocess.run(["git", "push", "main"], check=True)
+        subprocess.run(["git", "push", "origin", "main"], check=True)
         print("--- Results successfully pushed to GitHub! ---")
         
     except Exception as e:
