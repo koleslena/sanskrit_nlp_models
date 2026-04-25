@@ -67,9 +67,9 @@ def get_sent_for_pos(df, sents_count):
     
     return df.apply(lambda row: calc(row), axis=1)
 
-def get_split_pos_datasets(all_texts, full_pos=False, **kwargs):
+def get_split_pos_datasets(all_texts, full_pos=False, data_path=None, **kwargs):
 
-    files = [file for text in all_texts for file in get_files_conllu(f"{_TEXTS_DIR}/{text}/")]
+    files = [file for text in all_texts for file in get_files_conllu(f"{data_path if data_path else _TEXTS_DIR}/{text}/")]
 
     df, sentences, all_tokens = read_conllu_file(files)
 

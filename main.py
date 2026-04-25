@@ -11,7 +11,10 @@ from pos_taggers import bilstm_pos_tagger
 from sanskrit_tagger.pos_tagger import POSTagger
 from sanskrit_tagger.tagger_factory import get_pos_tagger
 
+from auto_push import git_push_results
+
 _train = False
+_push = False
 
 test_pos_sentences = [
     'atha kanyā pradāne sa tam eva arthaṁ vicintayan',
@@ -25,6 +28,7 @@ test_pos_sentences_tokenized = [sent.split() for sent in test_pos_sentences]
 
 def main():
     parser = argparse.ArgumentParser()
+    parser.add_argument("--data_path", type=str, default='../../texts/')
     parser.add_argument("--vocab_size", type=int, default=42) 
     parser.add_argument("--labels_num", type=int, default=734) 
     parser.add_argument("--max_batches_per_epoch_train", type=int, default=400)
@@ -49,7 +53,10 @@ def main():
                                            Datasources.BHAGAVATAPURANA, 
                                            Datasources.VISHNUPURANA
                                            ], 
-                            full_pos=args.full_pos)
+                            full_pos=args.full_pos,
+                            data_path=args.data_path)
+        
+        datasets.save_data()
         
         if args.model == 'cnn':
             model = cnn_pos_tagger.get_model(datasets.vocab_size, datasets.labels_num, embedding_size=args.embedding_size)
@@ -89,3 +96,5 @@ def main():
 if __name__ == "__main__":
     _train = True
     main()
+    if _push:
+        git_push_results()
