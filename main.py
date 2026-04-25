@@ -95,6 +95,6 @@ def main():
 
 if __name__ == "__main__":
     _train = True
-    # main()
+    main()
     if _push:
         git_push_results()
