@@ -2,13 +2,16 @@ from os.path import join, exists
 from os import mkdir
 import array as arr
 import time
+import csv
 
 import torch
+from sklearn.metrics import f1_score
 from tqdm import tqdm
 import copy
 
 from sanskrit_tagger.pos_tagger import get_device, copy_data_to_device
 
+_log_file_name = 'training_log.csv'
 
 class Trainer:
     def __init__(self, datasets, 
@@ -52,6 +55,9 @@ class Trainer:
             if not exists(current_path):
                 mkdir(current_path)
             self.current_path = current_path
+            with open(join(self.current_path, _log_file_name), 'a', newline='') as f:
+                writer = csv.writer(f)
+                writer.writerow(['epoch', 'train_loss', 'val_loss', 'val_f1'])
 
         if self.optimizer_ctor is None:
             self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.lr, weight_decay=self.l2_reg_alpha)
@@ -98,6 +104,10 @@ class Trainer:
         mean_val_loss = 0
         val_batches_n = 0
 
+        # Списки для сбора всех предсказаний и ответов по всей валидации
+        all_preds = []
+        all_labels = []
+
         with torch.no_grad():
             for batch_i, (batch_x, batch_y) in enumerate(self.datasets.val_dataloader):
                 if batch_i > self.max_batches_per_epoch_val:
@@ -106,15 +116,28 @@ class Trainer:
                 batch_x = copy_data_to_device(batch_x, self.device)
                 batch_y = copy_data_to_device(batch_y, self.device)
 
-                pred = self.model(batch_x)
-                loss = self.criterion(pred, batch_y)
+                # pred shape: (Batch, Labels, Seq)
+                pred_logits = self.model(batch_x)
+                loss = self.criterion(pred_logits, batch_y)
+
+                # 1. Получаем индексы самых вероятных классов: (Batch, Seq)
+                pred_classes = torch.argmax(pred_logits, dim=1)
+
+                # 2. Убираем паддинг (0), чтобы он не влиял на метрику
+                mask = (batch_y != 0)
+                
+                # Собираем данные (переводим в CPU и numpy)
+                all_preds.extend(pred_classes[mask].cpu().numpy())
+                all_labels.extend(batch_y[mask].cpu().numpy())
 
                 mean_val_loss += loss.item()
                 val_batches_n += 1
 
         mean_val_loss /= val_batches_n
+        # Считаем Macro-F1 по всем собранным данным
+        mean_val_f1 = f1_score(all_labels, all_preds, average='macro', zero_division=0)
 
-        return mean_val_loss
+        return mean_val_loss, mean_val_f1
         
 
     def train(self, epoch_n=None, save_after_train=True):
@@ -135,11 +158,11 @@ class Trainer:
             print('Среднее значение функции потерь на обучении', mean_train_loss)
 
             # valuation
-            mean_val_loss = self._val()
+            mean_val_loss, mean_val_f1 = self._val()
             print('Среднее значение функции потерь на валидации', mean_val_loss)
 
             if self.with_metrics:
-                self._save_metrics(mean_train_loss, mean_val_loss)
+                self._save_metrics(epoch, mean_train_loss, mean_val_loss, mean_val_f1)
 
             if mean_val_loss < self.best_val_loss:
                 best_epoch_i = epoch
@@ -164,6 +187,8 @@ class Trainer:
         
         torch.save(self.model.state_dict(), join(self.output_path, f'{self.output_model_name}.pth'))
 
+        print(f'Лучшая модель сохранена в {self.output_path}!')
+
         data = arr.array('i', [self.datasets.vocab_size, self.datasets.labels_num])
         with open(join(self.output_path, f'{self.output_model_name}_data.dat'), 'wb') as f:
             data.tofile(f)
@@ -171,8 +196,7 @@ class Trainer:
         self.datasets.save_data(self.output_path)
     
 
-    def _save_metrics(self, train_loss, val_loss):
-        with open(join(self.current_path, f'{self.output_model_name}_metrics_train.dat'), 'a') as f:
-            f.write(f"{train_loss}\n")
-        with open(join(self.current_path, f'{self.output_model_name}_metrics_val.dat'), 'a') as f:
-            f.write(f"{val_loss}\n")
+    def _save_metrics(self, epoch, train_loss, val_loss, val_f1):
+        with open(join(self.current_path, _log_file_name), 'a', newline='') as f:
+            writer = csv.writer(f)
+            writer.writerow([epoch, train_loss, val_loss, val_f1])
