@@ -6,6 +6,7 @@ import torch
 
 from common.models_factory import load_segmenter_model_from_url
 from pos_taggers import cnn_pos_tagger, bilstm_pos_tagger
+from sanskrit_tagger.device_util import get_device
 
 _local_run = False
 _data_url = f'https://raw.githubusercontent.com/koleslena/sanskrit_nlp_models/main/output/{{}}_data.dat'
@@ -65,9 +66,10 @@ def bilstm_full_pos_tagger_model(**kwargs):
 	model.load_state_dict(torch.load(os.path.join(abs_path, f'output/{model_name}.pth')))
 	return model
 
-def segmenter_model(version='latest', device='cpu', **kwargs):
-    model = load_segmenter_model_from_url(version, device, **kwargs)
-    return model
+def segmenter_model(version='latest', device=None, **kwargs):
+	device = get_device(device)
+	model = load_segmenter_model_from_url(version, device, **kwargs)
+	return model
 
 def main():
 	model = cnn_full_pos_tagger_model()
