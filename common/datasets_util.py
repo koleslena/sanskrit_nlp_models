@@ -1,28 +1,15 @@
-import os
 from os.path import join, exists
 import pickle
 from os import mkdir
 
 from torch.utils.data import DataLoader
 from torch.utils.data import TensorDataset
-from enum import Enum
 
 from sklearn.model_selection import train_test_split
 
 from common.vocab_util import build_vocabulary, pos_corpus_to_tensor
-from common.conllu_util import get_files_conllu, read_conllu_file
-
-
-_TEXTS_DIR = os.environ.get("SANSKRIT_TEXTS_DIR")
-
-class Datasources(str, Enum):
-    MAHABHARATA = 'Mahābhārata'
-    RAMAYANA = 'Rāmāyaṇa'
-    HITOPADESHA = 'Hitopadeśa'
-    AMARAKOSHA = 'Amarakośa'
-    VISHNUPURANA = "Viṣṇupurāṇa"
-    BHAGAVATAPURANA = "Bhāgavatapurāṇa"
-    SHIVAPURANA = "Śivapurāṇa"
+from common.conllu_util import get_files_conllu, read_pos_conllu_file
+from common.sanskrit_texts import TEXTS_DIR
 
 def get_info(row):
     if row['feats']:
@@ -69,9 +56,9 @@ def get_sent_for_pos(df, sents_count):
 
 def get_split_pos_datasets(all_texts, full_pos=False, data_path=None, **kwargs):
 
-    files = [file for text in all_texts for file in get_files_conllu(f"{data_path if data_path else _TEXTS_DIR}/{text}/")]
+    files = [file for text in all_texts for file in get_files_conllu(f"{data_path if data_path else TEXTS_DIR}/{text}/")]
 
-    df, sentences, all_tokens = read_conllu_file(files)
+    df, sentences, all_tokens = read_pos_conllu_file(files)
 
     sent_count = len(sentences)
 
@@ -110,11 +97,11 @@ def get_split_pos_datasets(all_texts, full_pos=False, data_path=None, **kwargs):
     return Datasets(train_dataset, val_dataset, char2id, max_sent_len, max_origin_token_len, unique_tags, **kwargs)
 
 def get_pos_datasets(train_texts, val_texts, full_pos=False, **kwargs):
-    train_files = [text for texts in train_texts for text in get_files_conllu(f"{_TEXTS_DIR}/{texts}/")]
-    val_files = [text for texts in val_texts for text in get_files_conllu(f"{_TEXTS_DIR}/{texts}/")]
+    train_files = [text for texts in train_texts for text in get_files_conllu(f"{TEXTS_DIR}/{texts}/")]
+    val_files = [text for texts in val_texts for text in get_files_conllu(f"{TEXTS_DIR}/{texts}/")]
 
-    train_df, train_sentences, train_all_tokens = read_conllu_file(train_files)
-    val_df, val_sentences, _ = read_conllu_file(val_files)
+    train_df, train_sentences, train_all_tokens = read_pos_conllu_file(train_files)
+    val_df, val_sentences, _ = read_pos_conllu_file(val_files)
 
     train_sent_count = len(train_sentences)
     val_sent_count = len(val_sentences)

@@ -4,6 +4,7 @@ import array as arr
 
 import torch
 
+from common.models_factory import DEFAULT_SEGMENTER_MODEL_NAME, load_segmenter_model
 from pos_taggers import cnn_pos_tagger, bilstm_pos_tagger
 
 _local_run = False
@@ -63,6 +64,11 @@ def bilstm_full_pos_tagger_model(**kwargs):
 	abs_path = os.path.dirname(os.path.abspath(__file__))
 	model.load_state_dict(torch.load(os.path.join(abs_path, f'output/{model_name}.pth')))
 	return model
+
+def segmenter_model(device, **kwargs):
+	model = load_segmenter_model(f'segmenter_output/{DEFAULT_SEGMENTER_MODEL_NAME}.pth', device)
+	return model
+
 
 def main():
 	model = cnn_full_pos_tagger_model()

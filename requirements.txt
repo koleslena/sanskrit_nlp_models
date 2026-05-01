@@ -8,3 +8,8 @@ matplotlib
 requests
 
 sanskrit_tagger>=0.1.6
+StrEnum
+requests
+
+indic_transliteration
+

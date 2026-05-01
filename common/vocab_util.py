@@ -2,6 +2,37 @@ import collections
 import numpy as np
 import torch
 
+def build_akshara_vocabulary(tokenized_texts, after_sort=True, min_count=5, pad_word=None):
+    akshara_counts = collections.defaultdict(int)
+
+    for txt in tokenized_texts:
+        unique_text_chr = set(txt)
+        for chr in unique_text_chr:
+            akshara_counts[chr] += 1
+
+    # убрать слишком редкие 
+    akshara_counts = {chr: cnt for chr, cnt in akshara_counts.items() if cnt >= min_count}
+
+    akshara_counts[" "] = -1
+    akshara_counts["-"] = -1
+
+    # отсортировать по убыванию частоты
+    if after_sort:
+        sorted_akshara_counts = sorted(akshara_counts.items(),
+                                    reverse=True,
+                                    key=lambda pair: pair[1])
+
+    # добавим несуществующее слово с индексом 0 для удобства пакетной обработки
+    if pad_word:
+        sorted_akshara_counts = [(pad_word, 0)] + sorted_akshara_counts
+        SOS_token = len(sorted_akshara_counts)
+        EOS_token = len(sorted_akshara_counts) + 1
+        sorted_akshara_counts = sorted_akshara_counts + [('<SOS>', SOS_token), ('<EOS>', EOS_token)]
+
+    # нумеруем символы
+    chr2id = {chr: i for i, (chr, _) in enumerate(sorted_akshara_counts)}
+
+    return chr2id
 
 def build_vocabulary(tokenized_texts, max_size=1000000, max_doc_freq=0.8, min_count=5, pad_word=None):
     word_counts = collections.defaultdict(int)
