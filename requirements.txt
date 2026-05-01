@@ -6,12 +6,12 @@ tqdm
 conllu
 matplotlib
 requests
+pydantic_settings
 python-dotenv
 PyGithub
 
 sanskrit_tagger>=0.1.6
 StrEnum
-requests
 
 indic_transliteration
 

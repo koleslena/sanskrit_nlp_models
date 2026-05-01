@@ -65,7 +65,7 @@ def bilstm_full_pos_tagger_model(**kwargs):
 	model.load_state_dict(torch.load(os.path.join(abs_path, f'output/{model_name}.pth')))
 	return model
 
-def segmenter_model(version, device, **kwargs):
+def segmenter_model(version='latest', device='cpu', **kwargs):
     model = load_segmenter_model_from_url(version, device, **kwargs)
     return model
 
