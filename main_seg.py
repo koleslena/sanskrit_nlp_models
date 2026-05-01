@@ -10,7 +10,12 @@ from sanskrit_tagger.tagger_factory import Segmenter, get_segmenter
 from common.segmenter_trainer import SegmenterTrainer
 from segmenter.segmenter import SanskritPointerSegmenter
 
+from auto_push import git_push_results
+
 _train = False
+_push = True
+
+model_name = DEFAULT_SEGMENTER_MODEL_NAME
 
 test_splitter_sentences = [
     "tamuktavantamātreyamagniveśa uvāca ha",
@@ -28,6 +33,7 @@ def main():
     parser.add_argument("--max_tokens_per_batch", type=int, default=None)
     parser.add_argument("--device", type=str, default='mps')
     parser.add_argument("--model_name", type=str, default=None)
+    parser.add_argument("--version", type=str, default=None)
     args = parser.parse_args()
 
     device=get_device(args.device)
@@ -74,4 +80,6 @@ def main():
 if __name__ == "__main__":
     _train = True
     main()
+    if _push:
+        git_push_results(f'output/{model_name}.pth')
 

@@ -26,6 +26,8 @@ test_pos_sentences = [
 ]
 test_pos_sentences_tokenized = [sent.split() for sent in test_pos_sentences]
 
+model_name="pos_tagger"
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--data_path", type=str, default='../../texts/')
@@ -91,10 +93,10 @@ def main():
     for sent_tokens, sent_tags in zip(test_pos_sentences_tokenized, pos_tagger(test_pos_sentences)):
         print(' '.join('{}-{}'.format(tok, tag) for tok, tag in zip(sent_tokens, sent_tags)))
         print()
-
+    
 
 if __name__ == "__main__":
     _train = True
     main()
     if _push:
-        git_push_results()
+        git_push_results(f'output/{model_name}.pth')

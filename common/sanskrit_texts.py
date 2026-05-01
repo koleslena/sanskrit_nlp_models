@@ -1,7 +1,10 @@
 import os
 from enum import Enum
+from dotenv import load_dotenv 
 
-TEXTS_DIR = os.environ.get("SANSKRIT_TEXTS_DIR")
+load_dotenv()
+
+TEXTS_DIR = os.getenv("SANSKRIT_TEXTS_DIR")
 
 class Datasources(str, Enum):
     # Эпический санскрит и Пураны 
