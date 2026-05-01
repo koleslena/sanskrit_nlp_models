@@ -27,7 +27,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--max_batches_per_epoch_train", type=int, default=100000)
     parser.add_argument("--max_batches_per_epoch_val", type=int, default=10000)
-    parser.add_argument("--epoch_n", type=int, default=100)
+    parser.add_argument("--epoch_n", type=int, default=20)
     parser.add_argument("--train_tuning", type=bool, default=False)
     parser.add_argument("--embedding_size", type=int, default=128)
     parser.add_argument("--max_tokens_per_batch", type=int, default=None)
@@ -42,7 +42,7 @@ def main():
 
     if _train:
             
-        texts = Datasources.get_datasource_list() 
+        texts = Datasources.get_datasource_list()[:1] 
 
         max_tokens_per_batch = args.max_tokens_per_batch if args.max_tokens_per_batch else 1000
 
