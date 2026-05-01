@@ -52,7 +52,7 @@ def load_segmenter_model_from_url(version, device):
     config = checkpoint['config']
     
     # 3. Создаем экземпляр модели, используя сохраненный конфиг
-    model = SanskritPointerSegmenter(len(char2id) + 1, 
+    model = SanskritPointerSegmenter(len(char2id), 
                                      config['emb_dim'],
                                      device, 
                                      hidden_dim=config['hidden_dim'], 
