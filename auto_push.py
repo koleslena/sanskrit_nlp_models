@@ -9,7 +9,7 @@ from config import Config
 
 load_dotenv()
 
-def push_to_hub(model_path):
+def git_push_results(model_path):
     token = os.getenv("GITHUB_TOKEN")
 
     # Загружаем модель в Releases через API (не забивая репозиторий)
