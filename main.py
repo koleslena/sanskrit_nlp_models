@@ -1,15 +1,14 @@
 import argparse
 
 import torch
-from torch.nn import functional as F
 
-from common.datasets_util import Datasources
+from common.sanskrit_texts import Datasources
 from common.loss import FocalLoss
 from common.model_trainer import Trainer
+from common.models_factory import DEFAULT_TAGGER_MODEL_NAME, load_tagger_model
 from common.pos_datasets import INDEX_PAD, PosDataloaders
-from pos_taggers import cnn_pos_tagger
 from pos_taggers import bilstm_pos_tagger
-from sanskrit_tagger.pos_tagger import POSTagger
+from sanskrit_tagger.pos_tagger import POSTagger, get_device
 from sanskrit_tagger.tagger_factory import get_pos_tagger
 
 from auto_push import git_push_results
@@ -27,7 +26,7 @@ test_pos_sentences = [
 ]
 test_pos_sentences_tokenized = [sent.split() for sent in test_pos_sentences]
 
-model_name="pos_tagger"
+model_name=DEFAULT_TAGGER_MODEL_NAME
 
 def main():
     parser = argparse.ArgumentParser()
@@ -36,32 +35,33 @@ def main():
     parser.add_argument("--labels_num", type=int, default=745) 
     parser.add_argument("--max_batches_per_epoch_train", type=int, default=100000)
     parser.add_argument("--max_batches_per_epoch_val", type=int, default=10000)
-    parser.add_argument("--epoch_n", type=int, default=50)
+    parser.add_argument("--epoch_n", type=int, default=100)
     parser.add_argument("--embedding_size", type=int, default=128)
     parser.add_argument("--device", type=str, default='cpu')
     parser.add_argument("--model", type=str, default='bilstm') # bilstm, cnn
     parser.add_argument("--full_pos", type=bool, default=True)
     parser.add_argument("--with_metrics", type=bool, default=True)
+    parser.add_argument("--max_tokens_per_batch", type=int, default=None)
+    parser.add_argument("--model_name", type=str, default=None)
+    parser.add_argument("--train_tuning", type=bool, default=True)
     args = parser.parse_args()
+    
+    device=get_device(args.device)
 
-    model_name = cnn_pos_tagger.get_model_name(full_pos=args.full_pos) if args.model == 'cnn' else bilstm_pos_tagger.get_model_name(full_pos=args.full_pos)
+    model_name = args.model_name if args.model_name else DEFAULT_TAGGER_MODEL_NAME
 
     if _train:
 
-        texts = [
-                Datasources.MAHABHARATA, 
-               Datasources.RAMAYANA, 
-               Datasources.AMARAKOSHA, 
-               Datasources.HITOPADESHA, 
-               Datasources.SHIVAPURANA, 
-               Datasources.BHAGAVATAPURANA, 
-                Datasources.VISHNUPURANA
-                ]
+        texts = Datasources.get_datasource_list()
 
-        datasets = PosDataloaders(texts, max_tokens=1500)
-        
-        if args.model == 'cnn':
-            model = cnn_pos_tagger.get_model(datasets.vocab_size, datasets.labels_num, embedding_size=args.embedding_size)
+        max_tokens_per_batch = args.max_tokens_per_batch if args.max_tokens_per_batch else 1500
+
+        datasets = PosDataloaders(texts, max_tokens=max_tokens_per_batch)
+
+        if args.train_tuning:
+            model = load_tagger_model(f'output/{model_name}.pth', device)
+            if len(model.char2id) != datasets.vocab_size or len(model.unique_tags) != datasets.labels_num:
+                raise ValueError("Размеры словарей данных и предобученной модели не совпадают!")
         else:
             model = bilstm_pos_tagger.get_model(datasets.vocab_size, datasets.labels_num, embedding_size=args.embedding_size)
 
@@ -79,14 +79,9 @@ def main():
 
         trainer.train()
 
-        model.load_state_dict(torch.load(f'output/{model_name}.pth'))
-
         pos_tagger = POSTagger(model, datasets.char2id, datasets.unique_tags)
     else:
-        model = cnn_pos_tagger.get_model(args.vocab_size, args.labels_num, embedding_size=args.embedding_size) if args.model == 'cnn' else \
-            bilstm_pos_tagger.get_model(args.vocab_size, args.labels_num, embedding_size=args.embedding_size)
-
-        model.load_state_dict(torch.load(f'output/{model_name}.pth'))
+        model = load_tagger_model(f'output/{model_name}.pth', device)
 
         pos_tagger = get_pos_tagger(model)
 

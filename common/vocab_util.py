@@ -2,13 +2,16 @@ import collections
 import numpy as np
 import torch
 
-def build_akshara_vocabulary(tokenized_texts, after_sort=True, pad_word=None):
+def build_akshara_vocabulary(tokenized_texts, after_sort=True, min_count=3, pad_word=None):
     akshara_counts = collections.defaultdict(int)
 
     for txt in tokenized_texts:
         unique_text_chr = set(txt)
         for chr in unique_text_chr:
             akshara_counts[chr] += 1
+
+   # убрать слишком редкие 
+    akshara_counts = {chr: cnt for chr, cnt in akshara_counts.items() if cnt >= min_count}
 
     akshara_counts[" "] = -1
     akshara_counts["-"] = -1
@@ -31,8 +34,8 @@ def build_akshara_vocabulary(tokenized_texts, after_sort=True, pad_word=None):
 
     return chr2id
 
-def build_vocabulary(tokenized_texts, pad_word=None):
-    word_counts = collections.defaultdict(int)
+def build_vocabulary(tokenized_texts, min_count=5, pad_word=None):
+    akshara_counts = collections.defaultdict(int)
     doc_n = 0
 
     # посчитать количество документов, в которых употребляется каждое слово
@@ -41,21 +44,24 @@ def build_vocabulary(tokenized_texts, pad_word=None):
         doc_n += 1
         unique_text_tokens = set(txt)
         for token in unique_text_tokens:
-            word_counts[token] += 1
+            akshara_counts[token] += 1
+
+    # убрать слишком редкие 
+    akshara_counts = {chr: cnt for chr, cnt in akshara_counts.items() if cnt >= min_count}
 
     # отсортировать слова по убыванию частоты
-    sorted_word_counts = sorted(word_counts.items(),
+    sorted_akshara_counts = sorted(akshara_counts.items(),
                                 reverse=True,
                                 key=lambda pair: pair[1])
 
     # добавим несуществующий символ с индексом 0 для удобства пакетной обработки
     if pad_word is not None:
-        sorted_word_counts = [(pad_word, 0)] + sorted_word_counts
+        sorted_akshara_counts = [(pad_word, 0)] + sorted_akshara_counts
 
     # нумеруем символы
-    word2id = {word: i for i, (word, _) in enumerate(sorted_word_counts)}
+    chr2id = {word: i for i, (word, _) in enumerate(sorted_akshara_counts)}
 
-    return word2id
+    return chr2id
 
 
 def pos_corpus_to_tensor(df_data, char2id, label2id, sent_count, max_sent_len, max_token_len):

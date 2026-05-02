@@ -201,7 +201,7 @@ class Trainer:
             "config": {
                 "emb_dim": self.model.embedding_size,
                 "hidden_dim": self.model.hidden_dim,
-                "layers_n": self.model.layers_n,
+                "n_layers": self.model.n_layers,
             }
         }
         

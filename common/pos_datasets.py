@@ -11,10 +11,9 @@ from torch.utils.data import Sampler
 import numpy as np
 from sklearn.model_selection import train_test_split
 
-from common.conllu_util import get_files_conllu, read_conllu_file
+from common.conllu_util import get_files_conllu, read_pos_conllu_file
 from common.vocab_util import build_akshara_vocabulary
-
-TEXTS_DIR = os.environ.get("SANSKRIT_TEXTS_DIR")
+from common.sanskrit_texts import TEXTS_DIR
 
 INDEX_PAD = -100
 
@@ -106,11 +105,11 @@ class PosDataloaders():
     def __init__(self, 
                  text_files, 
                  max_tokens=800,
-                 save_data=True):
+                 save_data=False):
         
         files = [file for text in text_files for file in get_files_conllu(f"{TEXTS_DIR}/{text}/")]
 
-        df, sentences = read_conllu_file(files)
+        df, sentences = read_pos_conllu_file(files)
 
         # Фильтруем: UPOS не равен '_' И FORM не равна '_'
         df_clean = df[(df['upos'] != '_') & (df['form'] != '_')].copy()

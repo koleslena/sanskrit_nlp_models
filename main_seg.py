@@ -50,7 +50,7 @@ def main():
 
         if args.train_tuning:
             model = load_segmenter_model(f'segmenter_output/{model_name}.pth', device)
-            if len(model.char2id) + 1 != datasets.vocab_size:
+            if len(model.char2id) != datasets.vocab_size:
                 raise ValueError("Размеры словарей данных и предобученной модели не совпадают!")
         else:
             model = SanskritPointerSegmenter(datasets.get_vocab_size(), args.embedding_size, device).to(device)
