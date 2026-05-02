@@ -9,6 +9,8 @@ class BiLSTMTagger(nn.Module):
 
         self.labels_num = labels_num
         self.hidden_dim = hidden_dim
+        self.embedding_size = embedding_size
+        self.layers_n = layers_n
         
         # 1. Уровень букв (Морфология)
         self.char_embeddings = nn.Embedding(vocab_size, embedding_size)
@@ -37,33 +39,55 @@ class BiLSTMTagger(nn.Module):
         """tokens: BatchSize x MaxSentenceLen x MaxTokenLen"""
         batch_size, max_sent_len, max_token_len = tokens.shape
         
+        # 1. МАСКА: находим, где реально есть слова (не все нули в слове)
+        # (batch_size, max_sent_len)
+        word_mask = (tokens.sum(dim=-1) != 0) 
+        # Длины предложений для упаковки
+        sent_lengths = word_mask.sum(dim=-1).cpu().clamp(min=1)
+
         # --- ШАГ 1: Обработка букв ---
         tokens_flat = tokens.view(batch_size * max_sent_len, max_token_len)
-        char_embs = self.char_embeddings(tokens_flat) 
+        # Считаем длины слов для упаковки на уровне букв
+        char_mask = (tokens_flat != 0)
+        char_lengths = char_mask.sum(dim=-1).cpu().clamp(min=1) # минимум 1 символ
+
+        char_embs = self.char_embeddings(tokens_flat)
         
         # Выделяем признаки из букв каждого слова независимо
-        char_feats, _ = self.char_lstm(char_embs)
-        char_feats = char_feats.permute(0, 2, 1)  
+        # Упаковка букв (чтобы не считать LSTM на паддингах внутри слова)
+        packed_chars = nn.utils.rnn.pack_padded_sequence(
+            char_embs, char_lengths, batch_first=True, enforce_sorted=False
+        )
+        packed_feats, _ = self.char_lstm(packed_chars)
+        char_feats, _ = nn.utils.rnn.pad_packed_sequence(packed_feats, batch_first=True)
         
+        char_feats = char_feats.permute(0, 2, 1)
         # Пуллинг дает "сгусток" смысла слова (его морфологический профиль)
-        word_vectors = self.global_pooling(char_feats).squeeze(-1) 
+        word_vectors = self.global_pooling(char_feats).squeeze(-1)
         word_vectors = self.dropout(word_vectors)
-        
+
         # --- ШАГ 2: Обработка контекста предложения ---
         # Возвращаем структуру предложения: (BatchSize, MaxSentenceLen, HiddenDim*2)
         sent_context = word_vectors.view(batch_size, max_sent_len, -1)
-        
+
+        # Упаковка слов (чтобы модель не видела паддинги в конце предложения)
+        packed_sent = nn.utils.rnn.pack_padded_sequence(
+            sent_context, sent_lengths, batch_first=True, enforce_sorted=False
+        )
+                
         # Теперь BiLSTM проходит ПО СЛОВАМ в предложении. 
         # Здесь учитываются омонимы и синтаксис!
-        sent_feats, _ = self.sentence_lstm(sent_context)
-        
+        packed_output, _ = self.sentence_lstm(packed_sent)
+        sent_feats, _ = nn.utils.rnn.pad_packed_sequence(
+            packed_output, batch_first=True, total_length=max_sent_len
+        )
+
         # --- ШАГ 3: Классификация ---
-        logits = self.fc(self.dropout(sent_feats)) # (BatchSize, MaxSentenceLen, LabelsNum)
-        
-        # Возвращаем в формате (BatchSize, LabelsNum, MaxSentenceLen) для CrossEntropy
+        logits = self.fc(self.dropout(sent_feats))
+        # Возвращаем в формате (BatchSize, LabelsNum, MaxSentenceLen)
         return logits.permute(0, 2, 1)
 
-def get_model(vocab_size, labels_num, embedding_size=64, hidden_dim=64, layers_n=4, dropout=0.3):
+def get_model(vocab_size, labels_num, embedding_size=128, hidden_dim=256, layers_n=3, dropout=0.3):
     bilstm_pos_tagger_model = BiLSTMTagger(vocab_size,
                                         labels_num, 
                                         embedding_size=embedding_size,

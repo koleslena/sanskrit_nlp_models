@@ -1,6 +1,8 @@
 from conllu import parse
 import pandas as pd
 import os
+from indic_transliteration import sanscript
+from indic_transliteration.sanscript import transliterate
 
 from common.transliterate import IASTToSlp
 
@@ -19,18 +21,22 @@ def read_pos_conllu_file(nfiles):
         # Parse the CoNLL-U data
         nsentences.append(parse(data))
 
-    sentences = [sent for nsent in nsentences for sent in nsent]
+    sentences = [sent for nsent in nsentences for sent in nsent if 'text' in sent.metadata]
+    sents = [transliterate(sent.metadata['text'], sanscript.IAST, sanscript.SLP1) for sent in sentences]
 
     # Convert to a list of dictionaries for DataFrame creation
     all_tokens = []
     for sentence in sentences:
         for token in sentence:
+            token['sent_id'] = sentence.metadata['sent_id']
+            form = token['form'] if len(token['form']) > 0 and token['form'] != '_' else token['lemma']
+            token['form_slp1'] = transliterate(form, sanscript.IAST, sanscript.SLP1)
             all_tokens.append(token)
 
     # Create a Pandas DataFrame
     df = pd.DataFrame(all_tokens)
     
-    return df, sentences, all_tokens
+    return df, sents
 
 def clean_df(df):
     # 1. Считаем длины

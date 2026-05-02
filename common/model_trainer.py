@@ -7,9 +7,10 @@ import csv
 import torch
 from sklearn.metrics import f1_score
 from tqdm import tqdm
-import copy
 
 from sanskrit_tagger.pos_tagger import get_device, copy_data_to_device
+
+from common.pos_datasets import INDEX_PAD
 
 _log_file_name = 'training_log.csv'
 
@@ -32,7 +33,6 @@ class Trainer:
         
         self.datasets = datasets
         self.model = model
-        self.best_model = model
         self.best_val_loss = float('inf')
         self.criterion = criterion
         self.output_path = output_path
@@ -67,20 +67,26 @@ class Trainer:
         # device
         self.device = get_device(device)
         print("using device: ", self.device)
-        model.to(self.device)
+        self.model.to(self.device)
 
     def _train_epoch(self, msg_format):
 
         self.model.train()
-        mean_train_loss = 0
-        train_batches_n = 0
-        bar = tqdm(enumerate(self.datasets.train_dataloader))
+        total_train_loss = 0
+        total_tokens = 0 # Считаем реальные слова, а не батчи
+
+        bar = tqdm(enumerate(self.datasets.train_dataloader), total=len(self.datasets.train_dataloader))
+
         for batch_i, (batch_x, batch_y) in bar:
             if batch_i > self.max_batches_per_epoch_train:
                 break
 
             batch_x = copy_data_to_device(batch_x, self.device)
             batch_y = copy_data_to_device(batch_y, self.device)
+
+            # Считаем количество реальных слов в батче (не паддингов)
+            non_pad_mask = (batch_y != INDEX_PAD)
+            num_tokens = non_pad_mask.sum().item()
 
             pred = self.model(batch_x)
             loss = self.criterion(pred, batch_y)
@@ -90,19 +96,18 @@ class Trainer:
 
             self.optimizer.step()
 
-            mean_train_loss += loss.item()
-            train_batches_n += 1
+            # Накапливаем loss взвешенно (пропорционально количеству слов в батче)
+            total_train_loss += loss.item() * num_tokens
+            total_tokens += num_tokens
 
             bar.set_description(msg_format.format(loss.item()))
 
-        mean_train_loss /= train_batches_n
-
-        return mean_train_loss
+        return total_train_loss / total_tokens if total_tokens > 0 else 0
 
     def _val(self):
         self.model.eval()
-        mean_val_loss = 0
-        val_batches_n = 0
+        total_val_loss = 0
+        total_tokens = 0
 
         # Списки для сбора всех предсказаний и ответов по всей валидации
         all_preds = []
@@ -116,24 +121,27 @@ class Trainer:
                 batch_x = copy_data_to_device(batch_x, self.device)
                 batch_y = copy_data_to_device(batch_y, self.device)
 
+                # Маска для исключения паддинга (индекс 0)
+                mask = (batch_y != INDEX_PAD)
+                num_tokens = mask.sum().item()
+
                 # pred shape: (Batch, Labels, Seq)
                 pred_logits = self.model(batch_x)
                 loss = self.criterion(pred_logits, batch_y)
 
-                # 1. Получаем индексы самых вероятных классов: (Batch, Seq)
-                pred_classes = torch.argmax(pred_logits, dim=1)
+                # Собираем статистику по лоссу
+                total_val_loss += loss.item() * num_tokens
+                total_tokens += num_tokens
 
-                # 2. Убираем паддинг (0), чтобы он не влиял на метрику
-                mask = (batch_y != 0)
+                # Получаем индексы самых вероятных классов: (Batch, Seq)
+                pred_classes = torch.argmax(pred_logits, dim=1)
                 
                 # Собираем данные (переводим в CPU и numpy)
                 all_preds.extend(pred_classes[mask].cpu().numpy())
                 all_labels.extend(batch_y[mask].cpu().numpy())
 
-                mean_val_loss += loss.item()
-                val_batches_n += 1
-
-        mean_val_loss /= val_batches_n
+        # Средний лосс по всем словам
+        mean_val_loss = total_val_loss / total_tokens if total_tokens > 0 else 0
         # Считаем Macro-F1 по всем собранным данным
         mean_val_f1 = f1_score(all_labels, all_preds, average='macro', zero_division=0)
 
@@ -150,7 +158,6 @@ class Trainer:
             lr_scheduler = None
     
         best_epoch_i = 0
-        self.best_model = copy.deepcopy(self.model)
 
         for epoch in range(epoch_n):
             # train
@@ -167,9 +174,8 @@ class Trainer:
             if mean_val_loss < self.best_val_loss:
                 best_epoch_i = epoch
                 self.best_val_loss = mean_val_loss
-                self.best_model = copy.deepcopy(self.model)
                 print('Новая лучшая модель!')
-                torch.save(self.best_model.state_dict(), join(self.output_path, f'{self.output_model_name}_tmp.pth'))
+                self._save_model_to_file(self.output_path, f'{self.output_model_name}_tmp.pth')
             elif epoch - best_epoch_i > self.early_stopping_patience:
                 print('Модель не улучшилась за последние {} эпох, прекращаем обучение'.format(
                     self.early_stopping_patience))
@@ -179,22 +185,29 @@ class Trainer:
                 lr_scheduler.step(mean_val_loss)
 
         if save_after_train:
-            self._save_best_model()
+            self.save_model()
 
-    def _save_best_model(self):
-        if not exists(self.output_path):
-            mkdir(self.output_path)
+    def save_model(self):
+        self._save_model_to_file(self.output_path, self.output_model_name)
+
+    def _save_model_to_file(self, path, file):
+        if not exists(path):
+            mkdir(path)
+
+        checkpoint = {
+            "model_state_dict": self.model.state_dict(),
+            "char2id": self.datasets.char2id,
+            "unique_tags": self.datasets.unique_tags,
+            "config": {
+                "emb_dim": self.model.embedding_size,
+                "hidden_dim": self.model.hidden_dim,
+                "layers_n": self.model.layers_n,
+            }
+        }
         
-        torch.save(self.model.state_dict(), join(self.output_path, f'{self.output_model_name}.pth'))
+        torch.save(checkpoint, join(path, f'{file}.pth'))
 
-        print(f'Лучшая модель сохранена в {self.output_path}!')
-
-        data = arr.array('i', [self.datasets.vocab_size, self.datasets.labels_num])
-        with open(join(self.output_path, f'{self.output_model_name}_data.dat'), 'wb') as f:
-            data.tofile(f)
-        
-        self.datasets.save_data(self.output_path)
-    
+        print(f'Лучшая модель сохранена в {path}!')    
 
     def _save_metrics(self, epoch, train_loss, val_loss, val_f1):
         with open(join(self.current_path, _log_file_name), 'a', newline='') as f:
