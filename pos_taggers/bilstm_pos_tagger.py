@@ -4,19 +4,19 @@ import numpy as np
 
 
 class BiLSTMTagger(nn.Module):
-    def __init__(self, vocab_size, labels_num, embedding_size, hidden_dim, layers_n, dropout):
+    def __init__(self, vocab_size, labels_num, embedding_size, hidden_dim, n_layers, dropout):
         super().__init__()
 
         self.labels_num = labels_num
         self.hidden_dim = hidden_dim
         self.embedding_size = embedding_size
-        self.layers_n = layers_n
+        self.n_layers = n_layers
         
         # 1. Уровень букв (Морфология)
         self.char_embeddings = nn.Embedding(vocab_size, embedding_size)
         self.char_lstm = nn.LSTM(embedding_size, 
                                  hidden_dim, 
-                                 num_layers=layers_n, 
+                                 num_layers=n_layers, 
                                  bidirectional=True, 
                                  dropout=dropout,
                                  batch_first=True)
@@ -27,7 +27,7 @@ class BiLSTMTagger(nn.Module):
         # Входной размер равен выходу char_lstm после пуллинга (hidden_dim * 2)
         self.sentence_lstm = nn.LSTM(hidden_dim * 2, 
                                      hidden_dim, 
-                                     num_layers=layers_n, 
+                                     num_layers=n_layers, 
                                      bidirectional=True, 
                                      dropout=dropout,
                                      batch_first=True)
@@ -87,12 +87,12 @@ class BiLSTMTagger(nn.Module):
         # Возвращаем в формате (BatchSize, LabelsNum, MaxSentenceLen)
         return logits.permute(0, 2, 1)
 
-def get_model(vocab_size, labels_num, embedding_size=128, hidden_dim=256, layers_n=3, dropout=0.3):
+def get_model(vocab_size, labels_num, embedding_size=128, hidden_dim=256, n_layers=3, dropout=0.3):
     bilstm_pos_tagger_model = BiLSTMTagger(vocab_size,
                                         labels_num, 
                                         embedding_size=embedding_size,
                                         hidden_dim=hidden_dim,
-                                        layers_n=layers_n, 
+                                        n_layers=n_layers, 
                                         dropout=dropout)
     print(f'BLSTM: vocab_size: {vocab_size}, labels_num: {labels_num}')
     print('Количество параметров', sum(np.prod(t.shape) for t in bilstm_pos_tagger_model.parameters()))
