@@ -10,8 +10,8 @@ class Config:
 
 class Settings(BaseSettings):
     
-    SANSKRIT_TEXTS_DIR: str
-    GITHUB_TOKEN: str
+    SANSKRIT_TEXTS_DIR: str = "texts/"
+    GITHUB_TOKEN: str = "ghp_..."
 
     # Конфигурация Pydantic
     model_config = SettingsConfigDict(
