@@ -1,6 +1,5 @@
 from os.path import join, exists
 from os import mkdir
-import array as arr
 import time
 import csv
 

@@ -22,8 +22,8 @@ def load_tagger_model(path, device):
     model = bilstm_pos_tagger.get_model(len(char2id), 
                                         len(unique_tags), 
                                         embedding_size=config['emb_dim'], 
-                                        hidden_dim=config['hidden_dim'])
-                                        # n_layers=config['n_layers'])
+                                        hidden_dim=config['hidden_dim'],
+                                        n_layers=config['n_layers'])
     
     # 4. Загружаем веса в созданную модель
     model.load_state_dict(checkpoint['model_state_dict'])
