@@ -20,6 +20,7 @@ class SegmenterTrainer:
                  output_model_name='segmenter_model', 
                  lr=0.001, 
                  epoch_n=10,
+                 train_tuning=False,
                  device=None, 
                  save_metrics=True,
                  metrics_path='metrics',
@@ -43,6 +44,7 @@ class SegmenterTrainer:
         self.optimizer_ctor = optimizer_ctor
         self.save_metrics = save_metrics
         self.metrics_path = metrics_path
+        self.train_tuning = train_tuning
 
         if self.save_metrics:
             if not exists(self.metrics_path):
@@ -53,7 +55,7 @@ class SegmenterTrainer:
             self.current_path = current_path
             with open(join(self.current_path, _log_file_name), 'a', newline='') as f:
                 writer = csv.writer(f)
-                writer.writerow(['epoch', 'train_loss', 'val_loss'])
+                writer.writerow(['epoch', 'train_loss', 'val_loss', 'accuracy_em', 'accuracy_char'])
 
         if self.optimizer_ctor is None:
             self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.lr)
@@ -112,6 +114,11 @@ class SegmenterTrainer:
         self.model.eval()
         mean_val_loss = 0
         val_batches_n = 0
+        
+        total_exact_matches = 0
+        total_correct_chars = 0
+        total_valid_chars = 0
+        total_sequences = 0
 
         with torch.no_grad():
             for batch_i, (batch_x, batch_y) in enumerate(self.datasets.val_dataloader):
@@ -121,18 +128,44 @@ class SegmenterTrainer:
                 batch_x = copy_data_to_device(batch_x, self.device)
                 batch_y = copy_data_to_device(batch_y, self.device)
 
+                # Генерация без подсказок (инференс-режим)
                 pred = self.model(batch_x, batch_y[:, :-1], teacher_forcing_ratio=0.0)
 
+                # --- Расчет Loss ---
                 output_reshape = pred.contiguous().view(-1, pred.shape[-1])
                 trg = batch_y[:, 1:].contiguous().view(-1)
                 loss = self.criterion(output_reshape, trg)
-
                 mean_val_loss += loss.item()
                 val_batches_n += 1
 
-        mean_val_loss /= val_batches_n
+                # --- Подготовка для метрик ---
+                predicted_indices = pred.argmax(dim=-1) # [batch, seq_len]
+                target_indices = batch_y[:, 1:]        # [batch, seq_len]
+                
+                # Маска для игнорирования паддинга (<PAD>)
+                pad_token_id = 0 
+                mask = (target_indices != pad_token_id)
 
-        return mean_val_loss
+                # Сравниваем тензоры
+                correct_tensor = (predicted_indices == target_indices)
+
+                # --- 1. Расчет Exact Match ---
+                # Строка верна, только если все токены (под маской) совпали
+                # Используем логическое И по строке, игнорируя нерелевантные (паддинг) позиции
+                line_match = (correct_tensor | ~mask).all(dim=-1)
+                total_exact_matches += line_match.sum().item()
+                total_sequences += batch_x.size(0)
+
+                # --- 2. Расчет Character Accuracy ---
+                # Считаем совпадения только там, где нет паддинга
+                total_correct_chars += (correct_tensor & mask).sum().item()
+                total_valid_chars += mask.sum().item()
+
+        mean_val_loss /= val_batches_n
+        accuracy_em = total_exact_matches / total_sequences
+        accuracy_char = total_correct_chars / total_valid_chars
+
+        return mean_val_loss, accuracy_em, accuracy_char
 
     def train(self, epoch_n=None, save_after_train=True, save_epoch_model=True):
         if epoch_n is None:
@@ -147,20 +180,21 @@ class SegmenterTrainer:
 
         for epoch in range(epoch_n):
             # train
-            # Линейное снижение TF от 1.0 до 0.5 за первые 5 эпох
+            # Линейное снижение TF от 1.0 до 0.5 за первые 5 эпох, для дообучения с 0.7
             if epoch < 5:
-                current_tf = 1.0 - (epoch * 0.1)
+                start_from = 0.7 if self.train_tuning else 1.0
+                current_tf = start_from - (epoch * 0.1)
             else:
                 current_tf = 0.5
             mean_train_loss = self._train_epoch(f'train {epoch}/{epoch_n} -- loss: {{:3.4f}}', current_tf, clip=1.0)
             print('Среднее значение функции потерь на обучении', mean_train_loss)
 
             # valuation
-            mean_val_loss = self._val()
+            mean_val_loss, accuracy_em, accuracy_char = self._val()
             print('Среднее значение функции потерь на валидации', mean_val_loss)
 
             if self.save_metrics:
-                self._save_metrics(epoch, mean_train_loss, mean_val_loss)
+                self._save_metrics(epoch, mean_train_loss, mean_val_loss, accuracy_em, accuracy_char)
 
             if mean_val_loss < best_val_loss:
                 best_epoch_i = epoch
@@ -199,7 +233,7 @@ class SegmenterTrainer:
         # Сохраняем одним файлом
         torch.save(checkpoint, join(path, name))
 
-    def _save_metrics(self, epoch, train_loss, val_loss):
+    def _save_metrics(self, epoch, train_loss, val_loss, accuracy_em, accuracy_char):
         with open(join(self.current_path, _log_file_name), 'a', newline='') as f:
             writer = csv.writer(f)
-            writer.writerow([epoch, train_loss, val_loss])
+            writer.writerow([epoch, train_loss, val_loss, accuracy_em, accuracy_char])
