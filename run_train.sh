@@ -1,8 +1,13 @@
+#!/bin/bash
+
 # Установка зависимостей
 pip install --upgrade pip
-pip install -r requirements.txt
+# Ускоряем установку, если что-то уже есть
+pip install --no-cache-dir -r requirements.txt
 
-# Запуск обучения в фоновом режиме
-# Все принты будут записываться в train_log.txt
-nohup python main.py --data_path ./data --epoch_n 2 > train_log.txt 2>&1 &
+# Выводим инфу о GPU в лог перед стартом
+nvidia-smi > train_log.txt
 
+# Запуск. Флаг -u (unbuffered) нужен, чтобы принты 
+# попадали в файл моментально, а не копились в буфере.
+python -u main_seg.py 2>&1 | tee -a train_log.txt

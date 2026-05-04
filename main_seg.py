@@ -46,7 +46,7 @@ def main():
 
         max_tokens_per_batch = args.max_tokens_per_batch if args.max_tokens_per_batch else 1000
 
-        datasets = SegmenterDataloaders(texts, max_tokens_per_batch=max_tokens_per_batch)
+        datasets = SegmenterDataloaders(texts, max_tokens_per_batch=max_tokens_per_batch, dataloader_workers_n=4)
 
         if args.train_tuning:
             model = load_segmenter_model(f'segmenter_output/{model_name}.pth', device)
