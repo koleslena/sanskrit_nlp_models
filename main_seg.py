@@ -69,18 +69,24 @@ def main():
         trainer.train()
 
         segmenter = Segmenter(model, datasets.get_char2id())
+
+        release = trainer.release
     else:
         model = load_segmenter_model(f'segmenter_output/{model_name}.pth', device)
 
         segmenter = get_segmenter(model)
 
+        release = getattr(model, 'config', {}).get('release', None)
+
     for sent, predicted in zip(test_splitter_sentences, segmenter(test_splitter_sentences)):
         print(f"Input:  {sent}")
         print(f"Output: {predicted}")
 
+    return release
+
 if __name__ == "__main__":
     _train = True
-    main()
+    release = main()
     if _push:
-        git_push_results(f'segmenter_output/{model_name}.pth')
+        git_push_results(f'segmenter_output/{model_name}.pth', release)
 

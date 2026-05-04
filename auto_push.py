@@ -9,7 +9,7 @@ from config import Config
 
 load_dotenv()
 
-def git_push_results(model_path):
+def git_push_results(model_path, release=None):
     token = os.getenv("GITHUB_TOKEN")
 
     # Загружаем модель в Releases через API (не забивая репозиторий)
@@ -20,7 +20,7 @@ def git_push_results(model_path):
         # Передаем объект auth 
         g = Github(auth=auth)
         repo = g.get_repo(Config.repo_name)
-        tag = f"model-{datetime.now().strftime('%Y%m%d-%H%M')}"
+        tag = release if release else f"model-{datetime.now().strftime('%Y%m%d-%H%M')}"
         
         # Создаем релиз
         release = repo.create_git_release(tag, tag, f"Auto-save from server")
@@ -59,4 +59,4 @@ def git_push_results(model_path):
         print(f"Release upload failed: {e}")
 
 if __name__ == "__main__":
-    push_to_hub("segmenter_output/segmenter_model.pth")
+    git_push_results("segmenter_output/segmenter_model.pth")

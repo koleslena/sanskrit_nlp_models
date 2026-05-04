@@ -105,6 +105,7 @@ class PosDataloaders():
     def __init__(self, 
                  text_files, 
                  max_tokens=800,
+                 dataloader_workers_n=0,
                  save_data=False):
         
         files = [file for text in text_files for file in get_files_conllu(f"{TEXTS_DIR}/{text}/")]
@@ -148,7 +149,8 @@ class PosDataloaders():
         self.train_dataloader = DataLoader(
             train_ds, 
             batch_sampler=train_list_of_batches, 
-            collate_fn=pos_collate_fn
+            collate_fn=pos_collate_fn,
+            num_workers=dataloader_workers_n
         )
 
         val_sampler = DynamicLengthGroupedSampler(val_ds, max_tokens=max_tokens)
@@ -158,7 +160,8 @@ class PosDataloaders():
             val_ds, 
             batch_sampler=val_list_of_batches,
             shuffle=False,
-            collate_fn=pos_collate_fn
+            collate_fn=pos_collate_fn,
+            num_workers=dataloader_workers_n
         )
 
         if save_data:

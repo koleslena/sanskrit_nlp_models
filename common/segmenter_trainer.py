@@ -49,7 +49,9 @@ class SegmenterTrainer:
         if self.save_metrics:
             if not exists(self.metrics_path):
                 mkdir(self.metrics_path)
-            current_path = join(self.metrics_path, f'{self.output_model_name}_metrics_{time.time()}')
+            t = f'{time.time()}'
+            self.release = f'{self.output_model_name}_{t}'
+            current_path = join(self.metrics_path, f'{self.output_model_name}_metrics_{t}')
             if not exists(current_path):
                 mkdir(current_path)
             self.current_path = current_path
@@ -226,6 +228,7 @@ class SegmenterTrainer:
                 'emb_dim': self.model.emb_dim,
                 'hidden_dim': self.model.hidden_dim,
                 'n_layers': self.model.n_layers,
+                'release': self.release,
                 'pointer_generator': True                # Пометка, что это кастомная версия
             }
         }

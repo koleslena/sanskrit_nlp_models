@@ -30,18 +30,17 @@ model_name=DEFAULT_TAGGER_MODEL_NAME
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--data_path", type=str, default='../../texts/')
     parser.add_argument("--vocab_size", type=int, default=58) 
     parser.add_argument("--labels_num", type=int, default=745) 
     parser.add_argument("--max_batches_per_epoch_train", type=int, default=100000)
     parser.add_argument("--max_batches_per_epoch_val", type=int, default=10000)
     parser.add_argument("--epoch_n", type=int, default=100)
     parser.add_argument("--embedding_size", type=int, default=128)
-    parser.add_argument("--device", type=str, default='cpu')
+    parser.add_argument("--device", type=str, default=None)
     parser.add_argument("--model", type=str, default='bilstm') # bilstm, cnn
     parser.add_argument("--full_pos", type=bool, default=True)
     parser.add_argument("--with_metrics", type=bool, default=True)
-    parser.add_argument("--max_tokens_per_batch", type=int, default=None)
+    parser.add_argument("--max_tokens_per_batch", type=int, default=5000)
     parser.add_argument("--model_name", type=str, default=None)
     parser.add_argument("--train_tuning", type=bool, default=True)
     args = parser.parse_args()
@@ -56,7 +55,7 @@ def main():
 
         max_tokens_per_batch = args.max_tokens_per_batch if args.max_tokens_per_batch else 1500
 
-        datasets = PosDataloaders(texts, max_tokens=max_tokens_per_batch)
+        datasets = PosDataloaders(texts, max_tokens=max_tokens_per_batch,dataloader_workers_n=4)
 
         if args.train_tuning:
             model = load_tagger_model(f'output/{model_name}.pth', device)
@@ -66,7 +65,7 @@ def main():
             model = bilstm_pos_tagger.get_model(datasets.vocab_size, datasets.labels_num, embedding_size=args.embedding_size)
 
         trainer = Trainer(datasets, model,
-                        FocalLoss(gamma=2.5, ignore_index=INDEX_PAD), 
+                        FocalLoss(gamma=2, ignore_index=INDEX_PAD), 
                         output_model_name=model_name, 
                         device=args.device,
                         with_metrics=args.with_metrics,
@@ -80,18 +79,24 @@ def main():
         trainer.train()
 
         pos_tagger = POSTagger(model, datasets.char2id, datasets.unique_tags)
+
+        release = trainer.release
     else:
         model = load_tagger_model(f'output/{model_name}.pth', device)
 
         pos_tagger = get_pos_tagger(model)
 
+        release = getattr(model, 'config', {}).get('release', None)
+
     for sent_tokens, sent_tags in zip(test_pos_sentences_tokenized, pos_tagger(test_pos_sentences)):
         print(' '.join('{}-{}'.format(tok, tag) for tok, tag in zip(sent_tokens, sent_tags)))
         print()
     
+    return release
+    
 
 if __name__ == "__main__":
     _train = True
-    main()
+    release = main()
     if _push:
-        git_push_results(f'output/{model_name}.pth')
+        git_push_results(f'output/{model_name}.pth', release=release)
