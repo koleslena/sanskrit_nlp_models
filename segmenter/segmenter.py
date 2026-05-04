@@ -56,7 +56,7 @@ class SanskritPointerSegmenter(nn.Module):
         else:
             # 2. Извлекаем скрытое состояние последнего реального символа
             # Сдвигаем длины на -1 для получения индексов (0-based)
-            last_idx = (lengths - 1).view(-1, 1, 1).expand(batch_size, 1, self.hidden_dim)
+            last_idx = (lengths - 1).view(-1, 1, 1).expand(batch_size, 1, self.hidden_dim).to(self.device)
             
             # Выбираем нужные векторы из encoder_outputs
             # last_hidden будет иметь форму [1, batch, hidden_dim]
