@@ -8,73 +8,74 @@ TEXTS_DIR = os.getenv("SANSKRIT_TEXTS_DIR")
 
 class Datasources(str, Enum):
     # Эпический санскрит и Пураны 
-    MAHABHARATA = "Mahābhārata"
-    RAMAYANA = "Rāmāyaṇa"
-    HARIVAMSHA = "Harivaṃśa"
+    MAHABHARATA = "Mahabharata"
+    RAMAYANA = "Ramayana"
+    HARIVAMSHA = "Harivamsha"
 
     # Purāṇas:
-    VISHNUPURANA = "Viṣṇupurāṇa"
-    BHAGAVATAPURANA = "Bhāgavatapurāṇa"
-    SHIVAPURANA = "Śivapurāṇa"
-    AGNIPURANA = "Agnipurāṇa" 
-    GARUDAPURANA = "Garuḍapurāṇa"
-    KALIKAPURANA = "Kālikāpurāṇa"
-    KURMAPURANA = "Kūrmapurāṇa"
-    LINGAPURANA = "Liṅgapurāṇa"
-    MATSYAPURANA = "Matsyapurāṇa"
-    NARASIMHAPURANA = "Narasiṃhapurāṇa"
-    SKANDAPURANA = "Skandapurāṇa"
-    VARAHAPURANA = "Varāhapurāṇa"
+    VISHNUPURANA = "Vishnupurana"
+    BHAGAVATAPURANA = "Bhagavatapurana"
+    SHIVAPURANA = "Shivapurana"
+    AGNIPURANA = "Agnipurana" 
+    GARUDAPURANA = "Garudapurana"
+    KALIKAPURANA = "Kalikapurana"
+    KURMAPURANA = "Kurmapurana"
+    LINGAPURANA = "Lingapurana"
+    MATSYAPURANA = "Matsyapurana"
+    NARASIMHAPURANA = "Narasimhapurana"
+    SKANDAPURANA = "Skandapurana"
+    VARAHAPURANA = "Varahapurana"
 
     # Дидактическая проза (Сказки и басни)
-    HITOPADESHA = 'Hitopadeśa'
-    PANCATANTRA = "Tantrākhyāyikā"
-    VETALAPANCAVIMSHATIKA = "Vetālapañcaviṃśatikā"
-    SHUKASAPTATI = "Śukasaptati"
-    KATHASARITASAGARA = "Kathāsaritsāgara"
+    HITOPADESHA = 'Hitopadesha'
+    PANCATANTRA = "Tantrakhyayika"
+    VETALAPANCAVIMSHATIKA = "Vetalapancavimshatika"
+    SHUKASAPTATI = "Shukasaptati"
+    KATHASARITASAGARA = "Kathasaritsagara"
 
-    # Аюрведа и естественные науки (Śāstra)
+    # Аюрведа и естественные науки (Shāstra)
     # Основы: 
-    CARAKA = "Carakasaṃhitā"
-    SUSHRUTA = "Suśrutasaṃhitā"
-    ASHTANGAHRDAYA = "Aṣṭāṅgahṛdayasaṃhitā"
-    ASHTANGASAMGRAHA = "Aṣṭāṅgasaṃgraha"
+    CARAKA = "Carakasamhita"
+    SUSHRUTA = "Sushrutasamhita"
+    ASHTANGAHRDAYA = "Ashtangahrdayasamhita"
+    ASHTANGASAMGRAHA = "Ashtangasamgraha"
     # Нигханту (словари трав): 
-    ASHTANGANIGHANTU = "Aṣṭāṅganighaṇṭu"
-    BIJANIGHANTU = "Bījanighaṇṭu"
-    DHANVANTARI = "Dhanvantarinighaṇṭu"
-    KAIYADEVA = "Kaiyadevanighaṇṭu"
-    MADANAPALA = "Madanapālanighaṇṭu"
-    RAJA = "Rājanighaṇṭu"
+    ASHTANGANIGHANTU = "Ashtanganighantu"
+    BIJANIGHANTU = "Bijanighantu"
+    DHANVANTARI = "Dhanvantarinighantu"
+    KAIYADEVA = "Kaiyadevanighantu"
+    MADANAPALA = "Madanapalanighantu"
+    RAJA = "Rajanighantu"
     # Алхимия и Расаяна: 
-    RASAHRDAYA = "Rasahṛdayatantra"
+    RASAHRDAYA = "Rasahrdayatantra"
     RASARATNA = "Rasaratnasamuccaya"
-    RASARNAVA = "Rasārṇava"
-    RASENDRA = "Rasendracintāmaṇi"
+    RASARNAVA = "Rasarnava"
+    RASENDRA = "Rasendracintamani"
     # Другое: 
-    ARTHASHASTRA = "Arthaśāstra" # политика
-    KRSHIPARASHARA = "Kṛṣiparāśara" # агро
-    MANUSMRTI = "Manusmṛti" # законы
+    ARTHASHASTRA = "Arthashastra" # политика
+    KRSHIPARASHARA = "Krshiparashara" # агро
+    MANUSMRTI = "Manusmrti" # законы
 
     # Философия, Йога и Тантра
     # Йога/Хатха-йога:
-    GHERANDA = "Gheraṇḍasaṃhitā"
-    GORAKSHA = "Gorakṣaśataka"
-    HATHAYOGAPRADIPIKA = "Haṭhayogapradīpikā"
-    YOGASUTRA = "Yogasūtra"
+    GHERANDA = "Gherandasamhita"
+    GORAKSHA = "Gorakshashataka"
+    HATHAYOGAPRADIPIKA = "Hathayogapradipika"
+    YOGASUTRA = "Yogasutra"
 
     # Тантра/Кашмирский Шиваизм:
-    TANTRALOKA = "Tantrāloka"
-    SHIVASUTRA = "Śivasūtra"
-    MRGENDRATANTRA = "Mṛgendratantra"
-    SPANDAKARIKA = "Spandakārikā"
+    TANTRALOKA = "Tantraloka"
+    SHIVASUTRA = "Shivasutra"
+    MRGENDRATANTRA = "Mrgendratantra"
+    SPANDAKARIKA = "Spandakarika"
 
     # Философия: 
-    SAMKHYAKARIKA = "Sāṃkhyakārikā"
-    NYAYASUTRA = "Nyāyasūtra"
-    VAISHESHIKASUTRA = "Vaiśeṣikasūtra"
+    SAMKHYAKARIKA = "Samkhyakarika"
+    NYAYASUTRA = "Nyayasutra"
+    VAISHESHIKASUTRA = "Vaisheshikasutra"
 
-    AMARAKOSHA = "Amarakośa"
+    AMARAKOSHA = "Amarakosha"
 
-    def get_datasource_list():
-        return [source.value for source in Datasources]
+    @classmethod
+    def get_datasource_list(cls):
+        return [source.value for source in cls]
