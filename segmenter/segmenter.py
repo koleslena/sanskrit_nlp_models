@@ -74,7 +74,7 @@ class SanskritPointerSegmenter(nn.Module):
         # 3. Первый символ для декодера всегда <SOS> 
         input_char = trg[:, 0].unsqueeze(1)
 
-        encoder_projected = self.decoder.U(encoder_outputs)
+        encoder_projected = self.decoder.attention.U(encoder_outputs)
         
         for t in range(trg_len):
             # Декодер возвращает логарифм распределения (уже с учетом Pointer)

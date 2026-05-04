@@ -9,15 +9,19 @@ class BahdanauAttention(nn.Module):
         self.U = nn.Linear(hidden_dim, hidden_dim)
         self.v = nn.Linear(hidden_dim, 1)
 
-    def forward(self, hidden, encoder_outputs, mask=None):
+    def forward(self, hidden, encoder_outputs, mask=None, encoder_projected=None):
         # hidden: [batch, hidden_dim] (из последнего слоя декодера)
         # encoder_outputs: [batch, seq_len, hidden_dim]
         
         hidden_with_time = hidden.unsqueeze(1) # [batch, 1, hidden_dim]
+
+        # Если мы передали уже готовую проекцию, используем её
+        if encoder_projected is None:
+            encoder_projected = self.U(encoder_outputs)
         
         # Вычисляем скоры (score)
         # 1. Получаем энергию (energy) -> [batch, seq_len, hidden_dim]
-        energy = torch.tanh(self.W(hidden_with_time) + self.U(encoder_outputs))
+        energy = torch.tanh(self.W(hidden_with_time) + encoder_projected)
         
         # 2. Сжимаем до 1 через слой v -> [batch, seq_len, 1]
         score = self.v(energy)
@@ -60,12 +64,12 @@ class PointerGeneratorDecoder(nn.Module):
         self.fc_out = nn.Linear(hidden_dim * 2, vocab_size)
         self.dropout = nn.Dropout(dropout)
 
-    def forward(self, x, hidden_states, encoder_outputs, src_indices, src_mask):
+    def forward(self, x, hidden_states, encoder_outputs, src_indices, src_mask, encoder_projected=None):
         # src_indices: [batch, src_len] — исходные индексы входной строки
         
         embedded = self.embedding(x) 
         last_hidden = hidden_states[-1][0].squeeze(0) 
-        context_vector, attn_dist = self.attention(last_hidden, encoder_outputs, src_mask)
+        context_vector, attn_dist = self.attention(last_hidden, encoder_outputs, src_mask, encoder_projected=encoder_projected)
         # attn_dist: [batch, src_len, 1] — куда модель "смотрит" прямо сейчас
         
         # 1. Считаем P_gen (вероятность генерации)
