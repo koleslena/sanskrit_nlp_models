@@ -13,7 +13,7 @@ class FocalLoss(nn.Module):
         # targets: (Batch, Seq)
         
         # 1. Считаем CE с reduction='none', чтобы получить ошибку по каждому слову отдельно
-        ce_loss = F.cross_entropy(inputs, targets, reduction='none', ignore_index=self.ignore_index)
+        ce_loss = F.cross_entropy(inputs, targets, reduction='none', ignore_index=self.ignore_index, label_smoothing=0.1)
         
         # 2. Считаем уверенность модели pt
         pt = torch.exp(-ce_loss)
