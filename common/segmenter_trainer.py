@@ -211,6 +211,7 @@ class SegmenterTrainer:
             # valuation
             mean_val_loss, accuracy_em, accuracy_char = self._val()
             print('Среднее значение функции потерь на валидации', mean_val_loss)
+            print('Метрики', accuracy_em, accuracy_char)
 
             if self.save_metrics:
                 self._save_metrics(epoch, mean_train_loss, mean_val_loss, accuracy_em, accuracy_char)
