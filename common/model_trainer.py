@@ -167,7 +167,7 @@ class Trainer:
 
             # valuation
             mean_val_loss, mean_val_f1 = self._val()
-            print('Среднее значение функции потерь на валидации', mean_val_loss)
+            print('Среднее значение функции потерь на валидации', mean_val_loss, mean_val_f1)
 
             if self.with_metrics:
                 self._save_metrics(epoch, mean_train_loss, mean_val_loss, mean_val_f1)
