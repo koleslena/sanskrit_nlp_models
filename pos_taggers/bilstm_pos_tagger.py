@@ -112,7 +112,7 @@ class BiLSTMTagger(nn.Module):
         # Возвращаем в формате (BatchSize, LabelsNum, MaxSentenceLen)
         return logits.permute(0, 2, 1)
 
-def get_model(vocab_size, labels_num, embedding_size=128, hidden_dim=256, n_layers=3, dropout=0.3):
+def get_model(vocab_size, labels_num, embedding_size=128, hidden_dim=256, n_layers=3, dropout=0.4):
     bilstm_pos_tagger_model = BiLSTMTagger(vocab_size,
                                         labels_num, 
                                         embedding_size=embedding_size,
