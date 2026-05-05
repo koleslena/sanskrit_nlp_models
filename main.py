@@ -42,7 +42,7 @@ def main():
     parser.add_argument("--with_metrics", type=bool, default=True)
     parser.add_argument("--max_tokens_per_batch", type=int, default=5000)
     parser.add_argument("--model_name", type=str, default=None)
-    parser.add_argument("--train_tuning", type=bool, default=True)
+    parser.add_argument("--train_tuning", type=bool, default=False)
     args = parser.parse_args()
     
     device=get_device(args.device)
