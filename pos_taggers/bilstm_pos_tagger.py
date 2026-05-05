@@ -1,7 +1,27 @@
+import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 import numpy as np
 
+class AttentionPooling(nn.Module):
+    def __init__(self, hidden_dim):
+        super().__init__()
+        # Слой для вычисления весов внимания
+        self.attention = nn.Linear(hidden_dim, 1)
+
+    def forward(self, x, mask=None):
+        # x: (Batch*Sent, MaxTokenLen, HiddenDim)
+        weights = self.attention(x).squeeze(-1) # (Batch*Sent, MaxTokenLen)
+        
+        if mask is not None:
+            # Зануляем влияние паддингов (букв-нулей)
+            weights = weights.masked_fill(mask == 0, -1e9)
+        
+        weights = F.softmax(weights, dim=-1)
+        # Взвешенная сумма векторов букв
+        weighted = torch.bmm(weights.unsqueeze(1), x).squeeze(1)
+        return weighted
 
 class BiLSTMTagger(nn.Module):
     def __init__(self, vocab_size, labels_num, embedding_size, hidden_dim, n_layers, dropout):
@@ -21,7 +41,8 @@ class BiLSTMTagger(nn.Module):
                                  dropout=dropout,
                                  batch_first=True)
         
-        self.global_pooling = nn.AdaptiveMaxPool1d(1)
+        # Заменяем MaxPool на Attention
+        self.char_attention = AttentionPooling(hidden_dim * 2)
         
         # 2. Уровень предложения (Синтаксис и омонимы)
         # Входной размер равен выходу char_lstm после пуллинга (hidden_dim * 2)
@@ -49,7 +70,7 @@ class BiLSTMTagger(nn.Module):
         tokens_flat = tokens.view(batch_size * max_sent_len, max_token_len)
         # Считаем длины слов для упаковки на уровне букв
         char_mask = (tokens_flat != 0)
-        char_lengths = char_mask.sum(dim=-1).cpu().clamp(min=1) # минимум 1 символ
+        char_lengths = char_mask.sum(dim=-1).cpu().clamp(min=1)
 
         char_embs = self.char_embeddings(tokens_flat)
         
@@ -61,16 +82,16 @@ class BiLSTMTagger(nn.Module):
         packed_feats, _ = self.char_lstm(packed_chars)
         char_feats, _ = nn.utils.rnn.pad_packed_sequence(packed_feats, batch_first=True)
         
-        char_feats = char_feats.permute(0, 2, 1)
-        # Пуллинг дает "сгусток" смысла слова (его морфологический профиль)
-        word_vectors = self.global_pooling(char_feats).squeeze(-1)
+        # Используем Attention вместо GlobalPooling
+        word_vectors = self.char_attention(char_feats, mask=char_mask)
         word_vectors = self.dropout(word_vectors)
 
-        # --- ШАГ 2: Обработка контекста предложения ---
-        # Возвращаем структуру предложения: (BatchSize, MaxSentenceLen, HiddenDim*2)
+        # --- ШАГ 2: Предложение с Residual ---
         sent_context = word_vectors.view(batch_size, max_sent_len, -1)
+        
+        word_mask = (tokens.sum(dim=-1) != 0)
+        sent_lengths = word_mask.sum(dim=-1).cpu().clamp(min=1)
 
-        # Упаковка слов (чтобы модель не видела паддинги в конце предложения)
         packed_sent = nn.utils.rnn.pack_padded_sequence(
             sent_context, sent_lengths, batch_first=True, enforce_sorted=False
         )
@@ -81,6 +102,10 @@ class BiLSTMTagger(nn.Module):
         sent_feats, _ = nn.utils.rnn.pad_packed_sequence(
             packed_output, batch_first=True, total_length=max_sent_len
         )
+
+        # RESIDUAL CONNECTION: Добавляем входные векторы слов к выходу LSTM
+        # Это помогает модели не "забывать" морфологию букв при анализе синтаксиса
+        sent_feats = sent_feats + sent_context 
 
         # --- ШАГ 3: Классификация ---
         logits = self.fc(self.dropout(sent_feats))
