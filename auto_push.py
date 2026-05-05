@@ -55,7 +55,7 @@ def git_push_results(model_path, release=None):
         subprocess.run(["git", "commit", "-m", commit_msg], check=True)
         # Формируем URL с токеном: https://<token>@github.com/user/repo.git
         remote_url = f"https://{token}@github.com/{Config.repo_name}.git"
-        subprocess.run(["git", "push", remote_url, "main"], check=True)
+        subprocess.run(["git", "push", "-u", remote_url, "main"], check=True)
 
     except Exception as e:
         print(f"Release upload failed: {e}")
