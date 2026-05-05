@@ -5,3 +5,5 @@ date,tag,url
 2026-05-02 23:25:41,model-20260502-2325,https://github.com/koleslena/sanskrit_nlp_models/releases/download/model-20260502-2325/pos_tagger_model.pth
 2026-05-03 19:48:36,model-20260503-1948,https://github.com/koleslena/sanskrit_nlp_models/releases/download/model-20260503-1948/segmenter_model.pth
 2026-05-03 23:09:37,model-20260503-2309,https://github.com/koleslena/sanskrit_nlp_models/releases/download/model-20260503-2309/segmenter_model.pth
+2026-05-05 00:54:23,model-20260505-0054,https://github.com/koleslena/sanskrit_nlp_models/releases/download/model-20260505-0054/segmenter_model.pth
+2026-05-05 01:17:55,segmenter_model_1777943866.843418,https://github.com/koleslena/sanskrit_nlp_models/releases/download/segmenter_model_1777943866.843418/segmenter_model.pth
