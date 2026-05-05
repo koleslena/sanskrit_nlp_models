@@ -176,7 +176,7 @@ class Trainer:
                 best_epoch_i = epoch
                 self.best_val_loss = mean_val_loss
                 print('Новая лучшая модель!')
-                self._save_model_to_file(self.output_path, f'{self.output_model_name}_tmp.pth')
+                self._save_model_to_file(self.output_path, f'{self.output_model_name}_tmp')
             elif epoch - best_epoch_i > self.early_stopping_patience:
                 print('Модель не улучшилась за последние {} эпох, прекращаем обучение'.format(
                     self.early_stopping_patience))

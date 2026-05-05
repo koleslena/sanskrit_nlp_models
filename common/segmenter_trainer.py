@@ -168,6 +168,25 @@ class SegmenterTrainer:
         accuracy_char = total_correct_chars / total_valid_chars
 
         return mean_val_loss, accuracy_em, accuracy_char
+    
+    def get_teacher_forcing_ratio(self, epoch: int) -> float:
+        """
+        Вычисляет teacher_forcing_ratio для текущей эпохи.
+        Логика:
+        1. 0-4 эпохи: Линейное снижение (1.0 -> 0.6 или 0.7 -> 0.3)
+        2. 5-9 эпохи: Плато на уровне 0.5
+        3. 10+ эпохи: Плановое снижение (Scheduled Sampling) до 0.0
+        """
+        if epoch < 10:
+            if epoch < 5:
+                # Быстрое снижение в начале для стабилизации обучения
+                start_from = 0.7 if self.train_tuning else 1.0
+                return start_from - (epoch * 0.1)
+            return 0.5
+        
+        # Плавное снижение после 10 эпохи (минус 0.05 за шаг)
+        reduction = (epoch - 10) * 0.05
+        return max(0.0, 0.5 - reduction)
 
     def train(self, epoch_n=None, save_after_train=True, save_epoch_model=True):
         if epoch_n is None:
@@ -183,11 +202,9 @@ class SegmenterTrainer:
         for epoch in range(epoch_n):
             # train
             # Линейное снижение TF от 1.0 до 0.5 за первые 5 эпох, для дообучения с 0.7
-            if epoch < 5:
-                start_from = 0.7 if self.train_tuning else 1.0
-                current_tf = start_from - (epoch * 0.1)
-            else:
-                current_tf = 0.5
+            current_tf = self.get_teacher_forcing_ratio(epoch)
+            print(f"Epoch {epoch}: Setting teacher_forcing_ratio to {current_tf:.2f}")
+
             mean_train_loss = self._train_epoch(f'train {epoch}/{epoch_n} -- loss: {{:3.4f}}', current_tf, clip=1.0)
             print('Среднее значение функции потерь на обучении', mean_train_loss)
 
