@@ -195,7 +195,7 @@ class SegmenterTrainer:
         best_val_loss = float('inf')
         mean_val_loss = float('inf')
 
-        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(self.optimizer, mode='min', factor=0.5, patience=2)
+        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(self.optimizer, mode='min', factor=0.5, patience=4)
 
         best_epoch_i = 0
 
