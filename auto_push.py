@@ -50,7 +50,7 @@ def git_push_results(model_path, release=None):
         print(f"--- Data appended to {csv_releases_file} ---")
 
         # Пушим код и логи как обычно
-        subprocess.run(["git", "add", "metrics", f"{csv_releases_file}"], check=True) # Добавляем только легкие файлы
+        subprocess.run(["git", "add", "metrics", csv_releases_file, "train_log.txt"], check=True) # Добавляем только легкие файлы
         commit_msg = f"Training log: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
         subprocess.run(["git", "commit", "-m", commit_msg], check=True)
         # Формируем URL с токеном: https://<token>@github.com/user/repo.git
