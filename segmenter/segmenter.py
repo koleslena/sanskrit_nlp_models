@@ -5,7 +5,7 @@ from segmenter.decoder import PointerGeneratorDecoder
 from segmenter.encoder import BiLSTMEncoder
 
 class SanskritPointerSegmenter(nn.Module):
-    def __init__(self, vocab_size, emb_dim, device, hidden_dim=512, n_layers=4, dropout=0.2):
+    def __init__(self, vocab_size, emb_dim, device, hidden_dim=512, n_layers=6, dropout=0.2):
         super().__init__()
         self.encoder = BiLSTMEncoder(vocab_size, emb_dim, hidden_dim, n_layers, dropout)
         self.decoder = PointerGeneratorDecoder(vocab_size, emb_dim, hidden_dim, n_layers, dropout)
