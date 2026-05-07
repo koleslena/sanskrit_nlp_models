@@ -184,8 +184,8 @@ class SegmenterTrainer:
                 return start_from - (epoch * 0.1)
             return 0.5
         
-        # Плавное снижение после 10 эпохи (минус 0.05 за шаг)
-        reduction = (epoch - 10) * 0.05
+        # Плавное снижение после 10 эпохи (минус 0.02 за шаг)
+        reduction = (epoch - 10) * 0.02
         return max(0.0, 0.5 - reduction)
 
     def train(self, epoch_n=None, save_after_train=True, save_epoch_model=True):
