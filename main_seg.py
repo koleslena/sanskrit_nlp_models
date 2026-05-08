@@ -1,4 +1,5 @@
 import argparse
+import torch.nn as nn
 
 from common.models_factory import load_segmenter_model, DEFAULT_SEGMENTER_MODEL_NAME
 from common.segmenter_datasets import SegmenterDataloaders
@@ -58,6 +59,7 @@ def main():
         trainer = SegmenterTrainer( datasets, 
                                     model,
                                     output_model_name=model_name, 
+                                    criterion = nn.CrossEntropyLoss(ignore_index=0, label_smoothing=0.1),
                                     device=device,
                                     lr=5e-4,
                                     epoch_n=args.epoch_n,
