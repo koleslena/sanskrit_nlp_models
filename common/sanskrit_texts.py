@@ -25,6 +25,7 @@ class Datasources(str, Enum):
     NARASIMHAPURANA = "Narasimhapurana"
     SKANDAPURANA = "Skandapurana"
     VARAHAPURANA = "Varahapurana"
+    DEVIMAHATMYA = "Devimahatmya"
 
     # Дидактическая проза (Сказки и басни)
     HITOPADESHA = 'Hitopadesha'
@@ -32,6 +33,7 @@ class Datasources(str, Enum):
     VETALAPANCAVIMSHATIKA = "Vetalapancavimshatika"
     SHUKASAPTATI = "Shukasaptati"
     KATHASARITASAGARA = "Kathasaritsagara"
+    AVADANASHATAKA = "Avadanashataka"
 
     # Аюрведа и естественные науки (Shāstra)
     # Основы: 
@@ -73,9 +75,25 @@ class Datasources(str, Enum):
     SAMKHYAKARIKA = "Samkhyakarika"
     NYAYASUTRA = "Nyayasutra"
     VAISHESHIKASUTRA = "Vaisheshikasutra"
+    KAMASUTRA = "Kamasutra"
+    SARVADARSHANASAMGRAHA = "Sarvadarshanasamgraha"
+    SURYASIDDHANTA = "Suryasiddhanta"
+    TARKASAMGRAHA = "Tarkasamgraha"
+
+    # Кавья
+    Kumārasaṃbhava = "Kumarasambhava"
+    Meghaduta = "Meghaduta"
+    Kiratarjuniya = "Kiratarjuniya"
+    Dashakumaracarita = "Dashakumaracarita"
+    Rtusamhara = "Rtusamhara"
+    Amarushataka = "Amarushataka"
+    
 
     AMARAKOSHA = "Amarakosha"
 
     @classmethod
     def get_datasource_list(cls):
         return [source.value for source in cls]
+    
+if __name__ == "__main__":
+    print(Datasources.get_datasource_list())
