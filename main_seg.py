@@ -1,5 +1,6 @@
 import argparse
 
+from common.loss import SegmenterFocalLoss
 from common.models_factory import load_segmenter_model, DEFAULT_SEGMENTER_MODEL_NAME
 from common.segmenter_datasets import SegmenterDataloaders
 
@@ -57,6 +58,7 @@ def main():
             
         trainer = SegmenterTrainer( datasets, 
                                     model,
+                                    criterion=SegmenterFocalLoss(gamma=2.0, ignore_index=0),
                                     output_model_name=model_name, 
                                     device=device,
                                     lr=5e-4,

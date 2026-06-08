@@ -181,7 +181,7 @@ class SegmenterTrainer:
             if epoch < 5:
                 # Быстрое снижение в начале для стабилизации обучения
                 start_from = 0.7 if self.train_tuning else 1.0
-                return start_from - (epoch * 0.1)
+                return start_from - (epoch * 0.03)
             return 0.5
         
         # Плавное снижение после 10 эпохи (минус 0.02 за шаг)
@@ -202,9 +202,9 @@ class SegmenterTrainer:
         for epoch in range(epoch_n):
             # train
             # Линейное снижение TF от 1.0 до 0.5 за первые 5 эпох, для дообучения с 0.7
-            # current_tf = self.get_teacher_forcing_ratio(epoch)
-            start_from = 0.7 if self.train_tuning else 1.0
-            current_tf = max(0.0, start_from - (epoch * 0.03))
+            current_tf = self.get_teacher_forcing_ratio(epoch)
+            # start_from = 0.7 if self.train_tuning else 1.0
+            # current_tf = max(0.0, start_from - (epoch * 0.03))
             print(f"Epoch {epoch}: Setting teacher_forcing_ratio to {current_tf:.2f}")
 
             mean_train_loss = self._train_epoch(f'train {epoch}/{epoch_n} -- loss: {{:3.4f}}', current_tf, clip=1.0)
