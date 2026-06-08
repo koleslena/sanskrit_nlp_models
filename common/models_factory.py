@@ -116,9 +116,12 @@ def load_segmenter_model_from_url(version, device, model_name=DEFAULT_SEGMENTER_
     # 2. Извлекаем словари
     char2id = checkpoint['char2id']
     config = checkpoint['config']
+
+    # TODO почему-то в весах длина словаря + 1, пока так, потом надо разобраться
+    saved_vocab_size = checkpoint['model_state_dict']['decoder.fc_out.weight'].shape[0]
     
     # 3. Создаем экземпляр модели, используя сохраненный конфиг
-    model = SanskritPointerSegmenter(len(char2id), 
+    model = SanskritPointerSegmenter(saved_vocab_size, 
                                      config['emb_dim'],
                                      device, 
                                      hidden_dim=config['hidden_dim'], 
