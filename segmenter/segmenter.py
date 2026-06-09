@@ -32,6 +32,9 @@ class SanskritPointerSegmenter(nn.Module):
         # True (1) там где есть символ, False (0) там где PAD
         src_mask = (src != 0)
 
+        # логика инициализации декодера для ГЛУБОКОГО BiLSTM
+        half = self.hidden_dim // 2
+
         # TODO
         if self.device.type == 'mps':
             # 2. Извлекаем состояние последнего реального символа для каждого слова в батче
@@ -40,8 +43,14 @@ class SanskritPointerSegmenter(nn.Module):
             for i in range(batch_size):
                 # Индекс последней буквы для i-го примера
                 last_idx = lengths[i] - 1
-                # Вытаскиваем вектор [hidden_dim] и добавляем его в список
-                last_char_states.append(encoder_outputs[i, last_idx, :])
+                # Забираем зрелый финал прямого прохода (с конца строки)
+                fw_state = encoder_outputs[i, last_idx, :half]
+                # Забираем зрелый финал обратного прохода (с самого начала строки, индекс 0)
+                bw_state = encoder_outputs[i, 0, half:]
+                
+                # Склеиваем их в один полноценный контекстный вектор [hidden_dim]
+                combined = torch.cat([fw_state, bw_state], dim=-1)
+                last_char_states.append(combined)
 
             # Собираем список векторов в один тензор формы [1, batch, hidden_dim]
             last_hidden = torch.stack(last_char_states).unsqueeze(0).contiguous()
@@ -55,14 +64,16 @@ class SanskritPointerSegmenter(nn.Module):
                 hidden_states.append((h, c))
         else:
             # 2. Извлекаем скрытое состояние последнего реального символа
-            # Сдвигаем длины на -1 для получения индексов (0-based)
-            last_idx = (lengths - 1).view(-1, 1, 1).expand(batch_size, 1, self.hidden_dim).to(self.device)
+            # Вырезаем индексы для прямого прохода
+            last_idx_fw = (lengths - 1).view(-1, 1, 1).expand(batch_size, 1, half).to(self.device)
+            fw_hidden = encoder_outputs[:, :, :half].gather(1, last_idx_fw) # [batch, 1, half]
             
-            # Выбираем нужные векторы из encoder_outputs
-            # last_hidden будет иметь форму [1, batch, hidden_dim]
-            last_hidden = encoder_outputs.gather(1, last_idx).transpose(0, 1)
+            # Обратный проход всегда завершается в нулевом индексе
+            bw_hidden = encoder_outputs[:, 0, half:].unsqueeze(1) # [batch, 1, half]
+            
+            # Соединяем их вместе и превращаем в форму [1, batch, hidden_dim]
+            last_hidden = torch.cat([fw_hidden, bw_hidden], dim=-1).transpose(0, 1)
 
-            # Инициализируем декодер этим состоянием
             hidden_states = [
                 (
                     last_hidden.clone(), 
