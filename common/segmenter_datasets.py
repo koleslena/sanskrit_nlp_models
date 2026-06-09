@@ -106,7 +106,8 @@ class SegmenterDataloaders:
         df = read_split_conllu_file(files, transliterate=True)
 
         # Динамический порог фильтрации
-        max_sentence_len = (max_tokens_per_batch // 2) - 4
+        # max_sentence_len = (max_tokens_per_batch // 2) - 4
+        max_sentence_len = min((max_tokens_per_batch // 2) - 4, 1500)
         
         initial_len = len(df)
         df = df[df['src'].str.len() <= max_sentence_len].copy()
