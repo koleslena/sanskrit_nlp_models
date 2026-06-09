@@ -23,18 +23,32 @@ class BiLSTMEncoder(nn.Module):
 
     def forward(self, x):
         # Создаем маску: True там, где НЕ паддинг (индекс 0)
-        mask = (x != 0).long().sum(dim=1).cpu() 
+        lengths = (x != 0).long().sum(dim=1).cpu() 
+        max_len = x.shape[1] # Сохраняем исходную длину для распаковки
         
         x = self.embedding(x)
         
-        # Проход через первый слой -> получаем [batch, seq_len, hidden_dim]
-        x, _ = self.first_layer(x)
+        # --- СЛОЙ 1 ---
+        # Упаковываем тензор: убираем паддинги из вычислений LSTM
+        packed_x = nn.utils.rnn.pack_padded_sequence(
+            x, lengths, batch_first=True, enforce_sorted=False
+        )
+        packed_out, _ = self.first_layer(packed_x)
+        # Распаковываем обратно в обычный тензор, возвращая паддинги на место
+        x, _ = nn.utils.rnn.pad_packed_sequence(packed_out, batch_first=True, total_length=max_len)
         
-        # Проход через глубокие двунаправленные слои
+        # --- ГЛУБОКИЕ СЛОИ С RESIDUAL CONNECTIONS ---
         for lstm in self.lstms:
-            residual = x # Размерность [batch, seq_len, hidden_dim]
-            x, _ = lstm(x) # На входе hidden_dim, на выходе снова hidden_dim (из-за bidirectional)
+            residual = x 
+            
+            # Снова упаковываем перед проходом через очередной BiLSTM
+            packed_x = nn.utils.rnn.pack_padded_sequence(
+                x, lengths, batch_first=True, enforce_sorted=False
+            )
+            packed_out, _ = lstm(packed_x)
+            x, _ = nn.utils.rnn.pad_packed_sequence(packed_out, batch_first=True, total_length=max_len)
+            
+            # Складываем с residual (теперь они оба чистые и совпадают по форме)
             x = self.dropout(x + residual)
             
-        # x: [batch, seq_len, hidden_dim]
-        return x, mask # возвращаем еще и длины для удобства
+        return x, lengths # Возвращаем чистый тензор и длины
