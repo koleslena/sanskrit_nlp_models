@@ -181,7 +181,7 @@ class SegmenterTrainer:
             if epoch < 5:
                 # Быстрое снижение в начале для стабилизации обучения
                 start_from = 0.7 if self.train_tuning else 1.0
-                return start_from - (epoch * 0.03)
+                return start_from - (epoch * 0.1)
             return 0.5
         
         # Плавное снижение после 10 эпохи (минус 0.02 за шаг)
