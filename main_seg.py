@@ -31,7 +31,7 @@ def main():
     parser.add_argument("--epoch_n", type=int, default=100)
     parser.add_argument("--train_tuning", type=bool, default=False)
     parser.add_argument("--embedding_size", type=int, default=256)
-    parser.add_argument("--max_tokens_per_batch", type=int, default=12000)
+    parser.add_argument("--max_tokens_per_batch", type=int, default=14000)
     parser.add_argument("--device", type=str, default=None)
     parser.add_argument("--model_name", type=str, default=None)
     parser.add_argument("--version", type=str, default=None)
@@ -58,7 +58,7 @@ def main():
             
         trainer = SegmenterTrainer( datasets, 
                                     model,
-                                    criterion=SegmenterFocalLoss(gamma=1.2, ignore_index=0),
+                                    criterion=SegmenterFocalLoss(gamma=1, ignore_index=0),
                                     output_model_name=model_name, 
                                     device=device,
                                     # lr=5e-4,

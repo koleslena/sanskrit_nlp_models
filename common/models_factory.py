@@ -9,6 +9,8 @@ from segmenter.segmenter import SanskritPointerSegmenter
 DEFAULT_SEGMENTER_MODEL_NAME = 'segmenter_model'
 DEFAULT_TAGGER_MODEL_NAME = 'pos_tagger_model'
 
+with_all_bi = ['segmenter_model_1781067108.6164422', 'segmenter_model_1781026960.6783192', 'segmenter_model_1781091384.9032512']
+
 def load_tagger_model(path, device):
     # 1. Загружаем весь объект
     checkpoint = torch.load(path, map_location=device)
@@ -35,7 +37,7 @@ def load_tagger_model(path, device):
     
     return model
 
-def load_segmenter_model(path, device):
+def load_segmenter_model(path, device, all_bi=False):
     # 1. Загружаем весь объект
     checkpoint = torch.load(path, map_location=device)
     
@@ -48,7 +50,8 @@ def load_segmenter_model(path, device):
                                      config['emb_dim'],
                                      device, 
                                      hidden_dim=config['hidden_dim'], 
-                                     n_layers=config['n_layers'])
+                                     n_layers=config['n_layers'],
+                                     all_bi = all_bi)
     
     # 4. Загружаем веса в созданную модель
     model.load_state_dict(checkpoint['model_state_dict'])
@@ -113,6 +116,8 @@ def load_segmenter_model_from_url(version, device, model_name=DEFAULT_SEGMENTER_
     # Скачивание и загрузка в память
     checkpoint = load_state_dict_from_url(url, map_location=device, progress=True)
     
+    all_bi = sum([1 for v in with_all_bi if v in url]) == 1
+
     # 2. Извлекаем словари
     char2id = checkpoint['char2id']
     config = checkpoint['config']
@@ -125,7 +130,8 @@ def load_segmenter_model_from_url(version, device, model_name=DEFAULT_SEGMENTER_
                                      config['emb_dim'],
                                      device, 
                                      hidden_dim=config['hidden_dim'], 
-                                     n_layers=config['n_layers'])
+                                     n_layers=config['n_layers'],
+                                     all_bi = all_bi)
 
     
     # 4. Загружаем веса в созданную модель
