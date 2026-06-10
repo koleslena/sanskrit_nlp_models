@@ -58,10 +58,10 @@ def main():
             
         trainer = SegmenterTrainer( datasets, 
                                     model,
-                                    criterion=SegmenterFocalLoss(gamma=2.0, ignore_index=0),
+                                    criterion=SegmenterFocalLoss(gamma=1.2, ignore_index=0),
                                     output_model_name=model_name, 
                                     device=device,
-                                    lr=5e-4,
+                                    # lr=5e-4,
                                     epoch_n=args.epoch_n,
                                     train_tuning=args.train_tuning,
                                     early_stopping_patience=5,
