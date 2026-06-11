@@ -3,26 +3,25 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 class FocalLoss(nn.Module):
-    def __init__(self, gamma=2, ignore_index=-100):
+    def __init__(self, gamma=2, ignore_index=-100, weight=None):
         super(FocalLoss, self).__init__()
         self.gamma = gamma
         self.ignore_index = ignore_index
+        self.register_buffer('weight', weight)
 
     def forward(self, inputs, targets):
-        # inputs: (Batch, Labels, Seq)
-        # targets: (Batch, Seq)
+        # Передаем веса классов в CE, если они есть
+        ce_loss = F.cross_entropy(inputs, targets, reduction='none', 
+                                  ignore_index=self.ignore_index, weight=self.weight)
         
-        # 1. Считаем CE с reduction='none', чтобы получить ошибку по каждому слову отдельно
-        ce_loss = F.cross_entropy(inputs, targets, reduction='none', ignore_index=self.ignore_index)
-        
-        # 2. Считаем уверенность модели pt
         pt = torch.exp(-ce_loss)
-        
-        # 3. Применяем формулу Focal Loss: (1-pt)^gamma * CE
-        # Вес (1-pt)^gamma будет близок к 0 для простых слов и к 1 для сложных
         f_loss = ((1 - pt) ** self.gamma) * ce_loss
         
-        return f_loss.mean()
+        # Считаем маску реальных (не паддинг) токенов
+        mask = (targets != self.ignore_index).float()
+        
+        # Усредняем только по реальным словам
+        return f_loss.sum() / mask.sum().clamp(min=1)
 
 
 class SegmenterFocalLoss(nn.Module):

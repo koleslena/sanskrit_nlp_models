@@ -127,6 +127,28 @@ class PosDataloaders():
         self.unique_tags = ['<NOTAG>'] + sorted(df_clean['pos'].value_counts().index)
         label2id = {label: i for i, label in enumerate(self.unique_tags)}
 
+        # Считаем частоты для каждого тега, который есть в df_train
+        train_counts = df_train['pos'].value_counts()
+
+        # Создаем массив весов размером с количество классов
+        weights = np.ones(self.labels_num, dtype=np.float32)
+
+        total_train_samples = len(df_train)
+        num_classes = self.labels_num
+
+        for label, idx in label2id.items():
+            if label in train_counts and label != '<NOTAG>':
+                count = train_counts[label]
+                # Сглаженная инверсивная частота (корень помогает не улетать весам в бесконечность)
+                weights[idx] = total_train_samples / (num_classes * np.sqrt(count) + 1e-5)
+            else:
+                # Для редких/отсутствующих в трейне тегов или <NOTAG>
+                weights[idx] = 1.0 
+
+        # Нормализуем веса, чтобы среднее было около 1.0
+        weights = weights / np.mean(weights)
+        self.class_weights = torch.FloatTensor(weights)
+
         self.vocab_size = len(self.char2id)
         self.labels_num = len(self.unique_tags)
 

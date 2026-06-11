@@ -34,7 +34,7 @@ def main():
     parser.add_argument("--labels_num", type=int, default=745) 
     parser.add_argument("--max_batches_per_epoch_train", type=int, default=100000)
     parser.add_argument("--max_batches_per_epoch_val", type=int, default=10000)
-    parser.add_argument("--epoch_n", type=int, default=100)
+    parser.add_argument("--epoch_n", type=int, default=200)
     parser.add_argument("--embedding_size", type=int, default=128)
     parser.add_argument("--device", type=str, default=None)
     parser.add_argument("--model", type=str, default='bilstm') # bilstm, cnn
@@ -65,7 +65,7 @@ def main():
             model = bilstm_pos_tagger.get_model(datasets.vocab_size, datasets.labels_num, embedding_size=args.embedding_size)
 
         trainer = Trainer(datasets, model,
-                        FocalLoss(gamma=2, ignore_index=INDEX_PAD), 
+                        FocalLoss(gamma=2, ignore_index=INDEX_PAD, weight=datasets.class_weights), 
                         output_model_name=model_name, 
                         device=args.device,
                         with_metrics=args.with_metrics,
