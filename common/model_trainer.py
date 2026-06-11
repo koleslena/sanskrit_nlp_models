@@ -203,7 +203,7 @@ class Trainer:
                 "emb_dim": self.model.embedding_size,
                 "hidden_dim": self.model.hidden_dim,
                 "n_layers": self.model.n_layers,
-                "layer_norm": self.layer_norm != None,
+                "layer_norm": self.model.layer_norm != None,
                 'release': self.release,
             }
         }
