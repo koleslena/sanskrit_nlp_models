@@ -28,7 +28,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--max_batches_per_epoch_train", type=int, default=100000)
     parser.add_argument("--max_batches_per_epoch_val", type=int, default=10000)
-    parser.add_argument("--epoch_n", type=int, default=100)
+    parser.add_argument("--epoch_n", type=int, default=200)
     parser.add_argument("--train_tuning", type=bool, default=False)
     parser.add_argument("--embedding_size", type=int, default=256)
     parser.add_argument("--max_tokens_per_batch", type=int, default=14000)
@@ -54,7 +54,7 @@ def main():
             if len(model.char2id) != datasets.vocab_size:
                 raise ValueError("Размеры словарей данных и предобученной модели не совпадают!")
         else:
-            model = SanskritPointerSegmenter(datasets.get_vocab_size(), args.embedding_size, device, n_layers=2, all_bi=True).to(device)
+            model = SanskritPointerSegmenter(datasets.get_vocab_size(), args.embedding_size, device, n_layers=2, all_bi=True, with_penalty=True).to(device)
             
         trainer = SegmenterTrainer( datasets, 
                                     model,
