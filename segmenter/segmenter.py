@@ -12,6 +12,7 @@ class SanskritPointerSegmenter(nn.Module):
         self.device = device
         self.emb_dim = emb_dim
         self.n_layers = n_layers
+        self.n_layers_dec = n_layers_dec
         self.hidden_dim = hidden_dim
         self.all_bi = all_bi
 
@@ -62,7 +63,7 @@ class SanskritPointerSegmenter(nn.Module):
 
             # Инициализируем hidden_states
             hidden_states = []
-            for _ in range(self.n_layers):
+            for _ in range(self.n_layers_dec):
                 h = last_hidden.clone()
                 # Создаем c сразу на MPS устройстве
                 c = torch.zeros(1, batch_size, self.hidden_dim, device=self.device, dtype=last_hidden.dtype)
@@ -94,7 +95,7 @@ class SanskritPointerSegmenter(nn.Module):
                     last_hidden.clone(), 
                     torch.zeros(1, batch_size, self.hidden_dim, device=self.device)
                 )
-                for _ in range(self.n_layers)
+                for _ in range(self.n_layers_dec)
             ]
         
         # 3. Первый символ для декодера всегда <SOS> 

@@ -31,7 +31,7 @@ def main():
     parser.add_argument("--epoch_n", type=int, default=100)
     parser.add_argument("--train_tuning", type=bool, default=False)
     parser.add_argument("--embedding_size", type=int, default=256)
-    parser.add_argument("--max_tokens_per_batch", type=int, default=16000)
+    parser.add_argument("--max_tokens_per_batch", type=int, default=14000)
     parser.add_argument("--device", type=str, default=None)
     parser.add_argument("--model_name", type=str, default=None)
     parser.add_argument("--version", type=str, default=None)
@@ -54,7 +54,7 @@ def main():
             if len(model.char2id) != datasets.vocab_size:
                 raise ValueError("Размеры словарей данных и предобученной модели не совпадают!")
         else:
-            model = SanskritPointerSegmenter(datasets.get_vocab_size(), args.embedding_size, device).to(device)
+            model = SanskritPointerSegmenter(datasets.get_vocab_size(), args.embedding_size, device, n_layers=2, all_bi=True).to(device)
             
         trainer = SegmenterTrainer( datasets, 
                                     model,
