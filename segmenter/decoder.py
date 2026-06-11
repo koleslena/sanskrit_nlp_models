@@ -3,13 +3,15 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 class BahdanauAttention(nn.Module):
-    def __init__(self, hidden_dim):
+    def __init__(self, hidden_dim, with_penalty):
         super(BahdanauAttention, self).__init__()
         self.W = nn.Linear(hidden_dim, hidden_dim)
         self.U = nn.Linear(hidden_dim, hidden_dim)
         self.v = nn.Linear(hidden_dim, 1)
 
-    def forward(self, hidden, encoder_outputs, mask=None, encoder_projected=None):
+        self.with_penalty = with_penalty
+
+    def forward(self, hidden, encoder_outputs, mask=None, encoder_projected=None, step_idx=0, penalty=3.0):
         # hidden: [batch, hidden_dim] (из последнего слоя декодера)
         # encoder_outputs: [batch, seq_len, hidden_dim]
         
@@ -25,6 +27,19 @@ class BahdanauAttention(nn.Module):
         
         # 2. Сжимаем до 1 через слой v -> [batch, seq_len, 1]
         score = self.v(energy)
+
+        if self.with_penalty:
+            # --- ШТРАФ ЗА РАССТОЯНИЕ ---
+            seq_len = encoder_outputs.shape[1]
+            # Создаем тензор индексов позиций энкодера: [1, seq_len, 1]
+            positions = torch.arange(seq_len, device=score.device).view(1, -1, 1)
+            
+            # Считаем абсолютное расстояние от текущего шага декодера до символов энкодера
+            # Делим на 3.0 (коэффициент жесткости штрафа, можно подбирать: от 1.0 до 5.0)
+            distance_penalty = -torch.abs(positions - step_idx).float() / penalty
+            
+            # Накладываем штраф на скоры
+            score = score + distance_penalty
 
         # 3. Применяем маску
         if mask is not None:
@@ -46,10 +61,10 @@ class BahdanauAttention(nn.Module):
         return context_vector, attention_weights
 
 class PointerGeneratorDecoder(nn.Module):
-    def __init__(self, vocab_size, emb_dim, hidden_dim, n_layers, dropout):
+    def __init__(self, vocab_size, emb_dim, hidden_dim, n_layers, dropout, with_penalty):
         super().__init__()
         self.embedding = nn.Embedding(vocab_size, emb_dim, padding_idx=0)
-        self.attention = BahdanauAttention(hidden_dim)
+        self.attention = BahdanauAttention(hidden_dim, with_penalty)
         
         # Переключатель: решит, генерировать или копировать
         # Вход: контекст + hidden_state + эмбеддинг
@@ -64,12 +79,12 @@ class PointerGeneratorDecoder(nn.Module):
         self.fc_out = nn.Linear(hidden_dim * 2, vocab_size)
         self.dropout = nn.Dropout(dropout)
 
-    def forward(self, x, hidden_states, encoder_outputs, src_indices, src_mask, encoder_projected=None):
+    def forward(self, x, hidden_states, encoder_outputs, src_indices, src_mask, encoder_projected=None, step_idx=0):
         # src_indices: [batch, src_len] — исходные индексы входной строки
         
         embedded = self.embedding(x) 
         last_hidden = hidden_states[-1][0].squeeze(0) 
-        context_vector, attn_dist = self.attention(last_hidden, encoder_outputs, src_mask, encoder_projected=encoder_projected)
+        context_vector, attn_dist = self.attention(last_hidden, encoder_outputs, src_mask, encoder_projected=encoder_projected, step_idx=step_idx)
         # attn_dist: [batch, src_len, 1] — куда модель "смотрит" прямо сейчас
         
         # 1. Считаем P_gen (вероятность генерации)

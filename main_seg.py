@@ -64,7 +64,7 @@ def main():
                                     # lr=5e-4,
                                     epoch_n=args.epoch_n,
                                     train_tuning=args.train_tuning,
-                                    early_stopping_patience=5,
+                                    early_stopping_patience=10,
                                     max_batches_per_epoch_train=args.max_batches_per_epoch_train,
                                     max_batches_per_epoch_val=args.max_batches_per_epoch_val)
 

@@ -5,16 +5,17 @@ from segmenter.decoder import PointerGeneratorDecoder
 from segmenter.encoder import BiLSTMEncoder
 
 class SanskritPointerSegmenter(nn.Module):
-    def __init__(self, vocab_size, emb_dim, device, hidden_dim=512, n_layers=6, n_layers_dec=2, dropout=0.2, all_bi=False):
+    def __init__(self, vocab_size, emb_dim, device, hidden_dim=512, n_layers=6, n_layers_dec=2, dropout=0.2, all_bi=False, with_penalty=False):
         super().__init__()
         self.encoder = BiLSTMEncoder(vocab_size, emb_dim, hidden_dim, n_layers, dropout)
-        self.decoder = PointerGeneratorDecoder(vocab_size, emb_dim, hidden_dim, n_layers_dec, dropout)
+        self.decoder = PointerGeneratorDecoder(vocab_size, emb_dim, hidden_dim, n_layers_dec, dropout, with_penalty)
         self.device = device
         self.emb_dim = emb_dim
         self.n_layers = n_layers
         self.n_layers_dec = n_layers_dec
         self.hidden_dim = hidden_dim
         self.all_bi = all_bi
+        self.with_penalty = with_penalty
 
     def forward(self, src, trg, teacher_forcing_ratio=0.5):
         # src: [batch, src_len] - вход в SLP1 (без пробелов)
@@ -111,7 +112,8 @@ class SanskritPointerSegmenter(nn.Module):
                 encoder_outputs,  
                 src, # передаем src для механизма копирования
                 src_mask, # передаем маску на src
-                encoder_projected=encoder_projected
+                encoder_projected=encoder_projected,
+                step_idx=t
             )
             
             outputs[:, t] = log_prob

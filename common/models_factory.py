@@ -52,7 +52,8 @@ def load_segmenter_model(path, device, all_bi=False):
                                      device, 
                                      hidden_dim=config['hidden_dim'], 
                                      n_layers=config['n_layers'],
-                                     all_bi = all_bi)
+                                     all_bi = all_bi,
+                                     with_penalty=config.get('with_penalty', False))
     
     # 4. Загружаем веса в созданную модель
     model.load_state_dict(checkpoint['model_state_dict'])
@@ -133,7 +134,8 @@ def load_segmenter_model_from_url(version, device, model_name=DEFAULT_SEGMENTER_
                                      device, 
                                      hidden_dim=config['hidden_dim'], 
                                      n_layers=config['n_layers'],
-                                     all_bi = all_bi)
+                                     all_bi = all_bi,
+                                     with_penalty=config.get('with_penalty', False))
 
     
     # 4. Загружаем веса в созданную модель

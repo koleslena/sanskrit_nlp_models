@@ -248,6 +248,7 @@ class SegmenterTrainer:
                 'emb_dim': self.model.emb_dim,
                 'hidden_dim': self.model.hidden_dim,
                 'n_layers': self.model.n_layers,
+                'with_penalty': self.model.with_penalty,
                 'release': self.release,
                 'pointer_generator': True                # Пометка, что это кастомная версия
             }
