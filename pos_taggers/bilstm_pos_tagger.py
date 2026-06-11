@@ -24,7 +24,7 @@ class AttentionPooling(nn.Module):
         return weighted
 
 class BiLSTMTagger(nn.Module):
-    def __init__(self, vocab_size, labels_num, embedding_size, hidden_dim, n_layers, dropout):
+    def __init__(self, vocab_size, labels_num, embedding_size, hidden_dim, n_layers, dropout, research_version=False):
         super().__init__()
 
         self.labels_num = labels_num
@@ -53,6 +53,10 @@ class BiLSTMTagger(nn.Module):
                                      dropout=dropout,
                                      batch_first=True)
         
+        
+        # Фикс баланса масштабов: нормализация после сложения ресидуала
+        self.layer_norm = nn.LayerNorm(hidden_dim * 2) if research_version else None
+
         self.dropout = nn.Dropout(dropout)
         self.fc = nn.Linear(hidden_dim * 2, labels_num)
         
@@ -88,9 +92,6 @@ class BiLSTMTagger(nn.Module):
 
         # --- ШАГ 2: Предложение с Residual ---
         sent_context = word_vectors.view(batch_size, max_sent_len, -1)
-        
-        word_mask = (tokens.sum(dim=-1) != 0)
-        sent_lengths = word_mask.sum(dim=-1).cpu().clamp(min=1)
 
         packed_sent = nn.utils.rnn.pack_padded_sequence(
             sent_context, sent_lengths, batch_first=True, enforce_sorted=False
@@ -105,20 +106,29 @@ class BiLSTMTagger(nn.Module):
 
         # RESIDUAL CONNECTION: Добавляем входные векторы слов к выходу LSTM
         # Это помогает модели не "забывать" морфологию букв при анализе синтаксиса
-        sent_feats = sent_feats + sent_context 
+        # ФИКС: Обнуляем мусорные векторы паддингов перед ресидуалом
+        word_mask_expanded = word_mask.unsqueeze(-1).float()
+        sent_context = sent_context * word_mask_expanded
+        
+        if self.layer_norm: 
+            # ФИКС: Складываем и пропускаем через LayerNorm
+            sent_feats = self.layer_norm(sent_feats + sent_context) 
+        else:
+            sent_feats = sent_feats + sent_context             
 
         # --- ШАГ 3: Классификация ---
         logits = self.fc(self.dropout(sent_feats))
         # Возвращаем в формате (BatchSize, LabelsNum, MaxSentenceLen)
         return logits.permute(0, 2, 1)
 
-def get_model(vocab_size, labels_num, embedding_size=128, hidden_dim=256, n_layers=3, dropout=0.4):
+def get_model(vocab_size, labels_num, embedding_size=128, hidden_dim=256, n_layers=3, dropout=0.3, research_version=True):
     bilstm_pos_tagger_model = BiLSTMTagger(vocab_size,
                                         labels_num, 
                                         embedding_size=embedding_size,
                                         hidden_dim=hidden_dim,
                                         n_layers=n_layers, 
-                                        dropout=dropout)
+                                        dropout=dropout, 
+                                        research_version=research_version)
     print(f'BLSTM: vocab_size: {vocab_size}, labels_num: {labels_num}')
     print('Количество параметров', sum(np.prod(t.shape) for t in bilstm_pos_tagger_model.parameters()))
     return bilstm_pos_tagger_model
