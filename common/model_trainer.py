@@ -174,7 +174,7 @@ class Trainer:
 
             if mean_val_f1 > self.best_val_f1:
                 best_epoch_i = epoch
-                self.best_val_loss = mean_val_f1
+                self.best_val_f1 = mean_val_f1
                 print('Новая лучшая модель!')
                 self._save_model_to_file(self.output_path, f'{self.output_model_name}_tmp')
             elif epoch - best_epoch_i > self.early_stopping_patience:
