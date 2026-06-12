@@ -3,6 +3,7 @@ from os.path import join, exists
 import pickle
 from os import mkdir
 import random
+from collections import Counter
 
 import torch
 from torch.utils.data import Dataset, DataLoader
@@ -64,13 +65,31 @@ def pos_collate_fn(batch):
     return inputs, targets
 
 class DynamicLengthGroupedSampler(Sampler):
-    def __init__(self, dataset, max_tokens):
+    def __init__(self, dataset, max_tokens, rare_threshold=10, oversample_factor=3):
         self.dataset = dataset
         self.max_tokens = max_tokens
         # Считаем длины (кол-во слов) каждого предложения
         self.lengths = [len(s) for s in dataset.sentences]
-        # Сортируем индексы предложений по их длине (от коротких к длинным)
-        self.indices = np.argsort(self.lengths)
+        # 2. Считаем глобальные частоты классов именно в этом датасете
+        all_labels = [lbl for label_seq in dataset.labels for lbl in label_seq]
+        class_counts = Counter(all_labels)
+        
+        # 3. Формируем расширенный список индексов
+        expanded_indices = []
+        for idx, label_seq in enumerate(dataset.labels):
+            expanded_indices.append(idx)
+            
+            # Проверяем, есть ли в текущем предложении хоть один редкий тег
+            # (но игнорируем <NOTAG>, если у него id=0)
+            has_rare_class = any(class_counts[lbl] < rare_threshold for lbl in label_seq if lbl != 0)
+            
+            if has_rare_class:
+                # Добавляем дубликаты этого предложения
+                expanded_indices.extend([idx] * (oversample_factor - 1))
+        
+        # 4. Сортируем ВСЕ индексы (включая дубликаты) по длине предложений.
+        # Это сохраняет оптимизацию паддингов! Дубликаты встанут в батчи вместе.
+        self.indices = sorted(expanded_indices, key=lambda x: self.lengths[x])
 
     def __iter__(self):
         batch = []
@@ -168,7 +187,12 @@ class PosDataloaders():
         val_ds = PosSanskritDataset(df_val, self.char2id, label2id)
 
         # Создаем список батчей через сэмплер
-        train_sampler = DynamicLengthGroupedSampler(train_ds, max_tokens=max_tokens)
+        train_sampler = DynamicLengthGroupedSampler(
+            train_ds, 
+            max_tokens=max_tokens, 
+            rare_threshold=25, 
+            oversample_factor=10
+        )
         train_list_of_batches = list(train_sampler)
         random.shuffle(train_list_of_batches)
 
@@ -180,7 +204,12 @@ class PosDataloaders():
             num_workers=dataloader_workers_n
         )
 
-        val_sampler = DynamicLengthGroupedSampler(val_ds, max_tokens=max_tokens)
+        val_sampler = DynamicLengthGroupedSampler(
+            val_ds, 
+            max_tokens=max_tokens, 
+            rare_threshold=0, 
+            oversample_factor=1
+        )
         val_list_of_batches = list(val_sampler)
 
         self.val_dataloader = DataLoader(
