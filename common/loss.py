@@ -7,9 +7,12 @@ class FocalLoss(nn.Module):
         super(FocalLoss, self).__init__()
         self.gamma = gamma
         self.ignore_index = ignore_index
-        self.register_buffer('weight', weight)
+        self.weight = weight
 
     def forward(self, inputs, targets):
+        if self.weight is not None and self.weight.device != inputs.device:
+            self.weight = self.weight.to(inputs.device)
+        
         # Передаем веса классов в CE, если они есть
         ce_loss = F.cross_entropy(inputs, targets, reduction='none', 
                                   ignore_index=self.ignore_index, weight=self.weight)
