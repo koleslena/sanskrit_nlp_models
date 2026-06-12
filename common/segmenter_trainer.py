@@ -194,8 +194,9 @@ class SegmenterTrainer:
     
         best_val_loss = float('inf')
         mean_val_loss = float('inf')
+        best_accuracy_em = 0.0
 
-        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(self.optimizer, mode='min', factor=0.5, patience=4)
+        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(self.optimizer, mode='max', factor=0.5, patience=4)
 
         best_epoch_i = 0
 
@@ -218,17 +219,27 @@ class SegmenterTrainer:
             if self.save_metrics:
                 self._save_metrics(epoch, mean_train_loss, mean_val_loss, accuracy_em, accuracy_char)
 
-            if mean_val_loss < best_val_loss:
+            # ГЛАВНЫЙ ПРИОРИТЕТ: Выросла точность целых строк (Exact Match)
+            is_improved = accuracy_em > best_accuracy_em
+            # ВСПОМОГАТЕЛЬНЫЙ: Точность такая же (плато), но модель стала увереннее (лосс упал)
+            is_loss_down = abs(accuracy_em - best_accuracy_em) < 1e-5 and mean_val_loss < best_val_loss
+
+            if is_improved or is_loss_down:
+                if is_improved:
+                    print('Новая лучшая модель!')
+                    best_accuracy_em = accuracy_em
+                else:
+                    print(f"Точность та же, но модель стала увереннее! Лосс упал.")
                 best_epoch_i = epoch
                 best_val_loss = mean_val_loss
-                print('Новая лучшая модель!')
+                
                 if save_epoch_model:
                     self._save_model_to(self.output_path, f'{self.output_model_name}_epoch.pth')
             elif epoch - best_epoch_i > self.early_stopping_patience:
                 print('Модель не улучшилась за последние {} эпох, прекращаем обучение'.format(self.early_stopping_patience))
                 break
 
-            scheduler.step(mean_val_loss)
+            scheduler.step(accuracy_em)
 
         if save_after_train:
             self.save_model()
