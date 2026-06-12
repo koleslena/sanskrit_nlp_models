@@ -19,8 +19,12 @@ class FocalLoss(nn.Module):
         
         pt = torch.exp(-ce_loss)
         f_loss = ((1 - pt) ** self.gamma) * ce_loss
-         
-        return f_loss.mean()
+        
+        # Считаем маску реальных (не паддинг) токенов
+        mask = (targets != self.ignore_index).float()
+        
+        # Усредняем только по реальным словам
+        return f_loss.sum() / mask.sum().clamp(min=1)
 
 
 class SegmenterFocalLoss(nn.Module):
