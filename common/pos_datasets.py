@@ -127,13 +127,22 @@ class PosDataloaders():
         self.unique_tags = ['<NOTAG>'] + sorted(df_clean['pos'].value_counts().index)
         label2id = {label: i for i, label in enumerate(self.unique_tags)}
 
-        # Считаем частоты для каждого тега, который есть в df_clean
-        train_counts = df_clean['pos'].value_counts()
+        self.vocab_size = len(self.char2id)
+        self.labels_num = len(self.unique_tags)
+
+        unique_sents = df_clean['sent_id'].unique()
+        train_sents, val_sents = train_test_split(unique_sents, test_size=0.2, random_state=42)
+
+        df_train = df_clean[df_clean['sent_id'].isin(train_sents)]
+        df_val = df_clean[df_clean['sent_id'].isin(val_sents)]
+
+        # Считаем частоты для каждого тега, который есть в df_train
+        train_counts = df_train['pos'].value_counts()
 
         # Создаем массив весов размером с количество классов
         weights = np.ones(self.labels_num, dtype=np.float32)
 
-        total_train_samples = len(df_clean)
+        total_train_samples = len(df_train)
         num_classes = self.labels_num
 
         for label, idx in label2id.items():
@@ -148,15 +157,6 @@ class PosDataloaders():
         # Нормализуем веса, чтобы среднее было около 1.0
         weights = weights / np.mean(weights)
         self.class_weights = torch.FloatTensor(weights)
-
-        self.vocab_size = len(self.char2id)
-        self.labels_num = len(self.unique_tags)
-
-        unique_sents = df_clean['sent_id'].unique()
-        train_sents, val_sents = train_test_split(unique_sents, test_size=0.2, random_state=42)
-
-        df_train = df_clean[df_clean['sent_id'].isin(train_sents)]
-        df_val = df_clean[df_clean['sent_id'].isin(val_sents)]
 
         # Создаем датасеты
         train_ds = PosSanskritDataset(df_train, self.char2id, label2id)
