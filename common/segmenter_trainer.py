@@ -224,12 +224,12 @@ class SegmenterTrainer:
             # ВСПОМОГАТЕЛЬНЫЙ: Точность такая же (плато), но модель стала увереннее (лосс упал)
             is_loss_down = abs(accuracy_em - best_accuracy_em) < 1e-5 and mean_val_loss < best_val_loss
 
-            if is_improved or is_loss_down:
-                if is_improved:
+            if (epoch <= 33 and mean_val_loss < best_val_loss) or (epoch > 33 and (is_improved or is_loss_down)):
+                if epoch > 33 and is_improved:
                     print('Новая лучшая модель!')
                     best_accuracy_em = accuracy_em
                 else:
-                    print(f"Точность та же, но модель стала увереннее! Лосс упал.")
+                    print(f"Точность та же, но модель стала увереннее! Лосс упал." if epoch > 33 else 'Переходный период: Лосс валидации упал')
                 best_epoch_i = epoch
                 best_val_loss = mean_val_loss
                 
@@ -238,8 +238,9 @@ class SegmenterTrainer:
             elif epoch - best_epoch_i > self.early_stopping_patience:
                 print('Модель не улучшилась за последние {} эпох, прекращаем обучение'.format(self.early_stopping_patience))
                 break
-
-            scheduler.step(accuracy_em)
+            
+            if epoch > 33:
+                scheduler.step(accuracy_em)
 
         if save_after_train:
             self.save_model()
