@@ -53,13 +53,8 @@ class BiLSTMTagger(nn.Module):
                                      dropout=dropout,
                                      batch_first=True)
         
-        if research_version:
-            # Фикс баланса масштабов: нормализация после сложения ресидуала
-            self.layer_norm = nn.LayerNorm(hidden_dim * 2)
-            # Проекционный слой для безопасного склеивания контекстов
-            self.projector = nn.Linear(hidden_dim * 4, hidden_dim * 2)
-        else:
-            self.layer_norm =  None
+        # Фикс баланса масштабов: нормализация после сложения ресидуала
+        self.layer_norm = nn.LayerNorm(hidden_dim * 2) if research_version else None
 
         self.dropout = nn.Dropout(dropout)
         self.fc = nn.Linear(hidden_dim * 2, labels_num)
@@ -116,8 +111,7 @@ class BiLSTMTagger(nn.Module):
         
         if self.layer_norm: 
             # ФИКС: Складываем и пропускаем через LayerNorm
-            combined = torch.cat([sent_feats, sent_context], dim=-1)
-            sent_feats = self.layer_norm(self.projector(combined)) 
+            sent_feats = self.layer_norm(sent_feats + sent_context) 
         else:
             sent_feats = sent_feats + sent_context             
 
