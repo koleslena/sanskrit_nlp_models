@@ -127,13 +127,13 @@ class PosDataloaders():
         self.unique_tags = ['<NOTAG>'] + sorted(df_clean['pos'].value_counts().index)
         label2id = {label: i for i, label in enumerate(self.unique_tags)}
 
-        # Считаем частоты для каждого тега, который есть в df_train
-        train_counts = df_train['pos'].value_counts()
+        # Считаем частоты для каждого тега, который есть в df_clean
+        train_counts = df_clean['pos'].value_counts()
 
         # Создаем массив весов размером с количество классов
         weights = np.ones(self.labels_num, dtype=np.float32)
 
-        total_train_samples = len(df_train)
+        total_train_samples = len(df_clean)
         num_classes = self.labels_num
 
         for label, idx in label2id.items():
