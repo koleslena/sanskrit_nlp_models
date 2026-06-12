@@ -32,7 +32,7 @@ class Trainer:
         
         self.datasets = datasets
         self.model = model
-        self.best_val_loss = float('inf')
+        self.best_val_f1 = 0.0
         self.criterion = criterion
         self.output_path = output_path
         self.output_model_name = output_model_name
@@ -172,9 +172,9 @@ class Trainer:
             if self.with_metrics:
                 self._save_metrics(epoch, mean_train_loss, mean_val_loss, mean_val_f1)
 
-            if mean_val_loss < self.best_val_loss:
+            if mean_val_f1 > self.best_val_f1:
                 best_epoch_i = epoch
-                self.best_val_loss = mean_val_loss
+                self.best_val_loss = mean_val_f1
                 print('Новая лучшая модель!')
                 self._save_model_to_file(self.output_path, f'{self.output_model_name}_tmp')
             elif epoch - best_epoch_i > self.early_stopping_patience:
@@ -183,7 +183,7 @@ class Trainer:
                 break
 
             if lr_scheduler is not None:
-                lr_scheduler.step(mean_val_loss)
+                lr_scheduler.step(mean_val_f1)
 
         if save_after_train:
             self.save_model()

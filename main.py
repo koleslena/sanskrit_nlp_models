@@ -40,7 +40,7 @@ def main():
     parser.add_argument("--model", type=str, default='bilstm') # bilstm, cnn
     parser.add_argument("--full_pos", type=bool, default=True)
     parser.add_argument("--with_metrics", type=bool, default=True)
-    parser.add_argument("--max_tokens_per_batch", type=int, default=12000)
+    parser.add_argument("--max_tokens_per_batch", type=int, default=16000)
     parser.add_argument("--model_name", type=str, default=None)
     parser.add_argument("--train_tuning", type=bool, default=False)
     args = parser.parse_args()
@@ -74,7 +74,7 @@ def main():
                         early_stopping_patience=10,
                         max_batches_per_epoch_train=args.max_batches_per_epoch_train,
                         max_batches_per_epoch_val=args.max_batches_per_epoch_val,
-                        lr_scheduler_ctor=lambda optim: torch.optim.lr_scheduler.ReduceLROnPlateau(optim, patience=3, factor=0.5))
+                        lr_scheduler_ctor=lambda optim: torch.optim.lr_scheduler.ReduceLROnPlateau(optim, patience=3, factor=0.5, mode='max'))
 
         trainer.train()
 
