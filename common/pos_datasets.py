@@ -142,17 +142,22 @@ class PosDataloaders():
         # Создаем массив весов размером с количество классов
         weights = np.ones(self.labels_num, dtype=np.float32)
 
-        total_train_samples = len(df_train)
-        num_classes = self.labels_num
+        # Константа сглаживания (чем она больше, тем ближе веса к 1.0)
+        # 1.5 или 2.0 — идеальный баланс для 807 классов
+        C = 1.5
 
         for label, idx in label2id.items():
-            if label in train_counts and label != '<NOTAG>':
+            if label == '<NOTAG>':
+                weights[idx] = 1.0
+                continue
+                
+            if label in train_counts:
                 count = train_counts[label]
-                # Сглаженная инверсивная частота (корень помогает не улетать весам в бесконечность)
-                weights[idx] = total_train_samples / (num_classes * np.sqrt(count) + 1e-5)
+                # Мягкое логарифмическое сглаживание
+                weights[idx] = 1.0 / np.log(C + count)
             else:
-                # Для редких/отсутствующих в трейне тегов или <NOTAG>
-                weights[idx] = 1.0 
+                # Для экстремально редких тегов, которых вообще нет в трейне
+                weights[idx] = 1.0 / np.log(C + 1)
 
         # Нормализуем веса, чтобы среднее было около 1.0
         weights = weights / np.mean(weights)
