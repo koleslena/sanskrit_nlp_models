@@ -12,7 +12,8 @@ DEFAULT_TAGGER_MODEL_NAME = 'pos_tagger_model'
 with_all_bi = ['segmenter_model_1781067108.6164422', 
                'segmenter_model_1781026960.6783192', 
                'segmenter_model_1781091384.9032512', 
-               'segmenter_model_1781177574.6417813']
+               'segmenter_model_1781177574.6417813',
+               'segmenter_model_1781204808.2988951']
 
 def load_tagger_model(path, device):
     # 1. Загружаем весь объект
