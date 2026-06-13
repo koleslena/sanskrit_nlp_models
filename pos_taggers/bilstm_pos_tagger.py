@@ -83,7 +83,9 @@ class BiLSTMTagger(nn.Module):
             char_embs, char_lengths, batch_first=True, enforce_sorted=False
         )
         packed_feats, _ = self.char_lstm(packed_chars)
-        char_feats, _ = nn.utils.rnn.pad_packed_sequence(packed_feats, batch_first=True)
+        char_feats, _ = nn.utils.rnn.pad_packed_sequence(
+            packed_feats, batch_first=True, total_length=max_token_len
+        )
         
         # Используем Attention вместо GlobalPooling
         word_vectors = self.char_attention(char_feats, mask=char_mask)
@@ -110,8 +112,8 @@ class BiLSTMTagger(nn.Module):
         sent_context = sent_context * word_mask_expanded
         
         if self.layer_norm: 
-            # ФИКС: Складываем и пропускаем через LayerNorm
-            sent_feats = self.layer_norm(sent_feats + sent_context) 
+            # Складываем и пропускаем через LayerNorm
+            sent_feats = self.layer_norm(sent_feats + sent_context) * word_mask_expanded
         else:
             sent_feats = sent_feats + sent_context             
 
