@@ -190,8 +190,8 @@ class PosDataloaders():
         train_sampler = DynamicLengthGroupedSampler(
             train_ds, 
             max_tokens=max_tokens, 
-            rare_threshold=25, 
-            oversample_factor=10
+            rare_threshold=50, 
+            oversample_factor=50
         )
         train_list_of_batches = list(train_sampler)
         random.shuffle(train_list_of_batches)
