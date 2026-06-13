@@ -10,15 +10,31 @@ class FocalLoss(nn.Module):
         self.weight = weight
 
     def forward(self, inputs, targets):
+        """
+        inputs:  [BatchSize, NumClasses, SeqLen] - логиты после permute(0, 2, 1)
+        targets: [BatchSize, SeqLen] - ID классов с паддингами (-100)
+        """
         if self.weight is not None and self.weight.device != inputs.device:
             self.weight = self.weight.to(inputs.device)
         
         # Передаем веса классов в CE, если они есть
-        ce_loss = F.cross_entropy(inputs, targets, reduction='none', 
-                                  ignore_index=self.ignore_index, weight=self.weight)
+        ce_loss = F.cross_entropy(inputs, targets, reduction='none', ignore_index=self.ignore_index)
         
         pt = torch.exp(-ce_loss)
         f_loss = ((1 - pt) ** self.gamma) * ce_loss
+
+        if self.weight is not None:
+            # Делаем безопасную копию таргетов [BatchSize, SeqLen]
+            safe_targets = targets.clone()
+            
+            # Убираем ignore_index, чтобы избежать IndexError
+            safe_targets[targets == self.ignore_index] = 0
+            
+            # Вытягиваем веса для каждого токена. Результат: [BatchSize, SeqLen]
+            class_weights = self.weight[safe_targets]
+            
+            # Умножаем лосс на веса (размерности совпадают)
+            f_loss = f_loss * class_weights
         
         # Считаем маску реальных (не паддинг) токенов
         mask = (targets != self.ignore_index).float()
@@ -60,4 +76,4 @@ class SegmenterFocalLoss(nn.Module):
         # 6. Обнуляем лосс там, где были паддинги, и усредняем по реальным символам
         loss = loss * valid_mask.float()
         
-        return loss.sum() / valid_mask.sum()
+        return loss.sum() / (valid_mask.sum() + 1e-8)

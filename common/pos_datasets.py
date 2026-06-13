@@ -173,10 +173,10 @@ class PosDataloaders():
             if label in train_counts:
                 count = train_counts[label]
                 # Мягкое логарифмическое сглаживание
-                weights[idx] = 1.0 / np.log(C + count)
+                weights[idx] = 1.0 / np.sqrt(count)
             else:
                 # Для экстремально редких тегов, которых вообще нет в трейне
-                weights[idx] = 1.0 / np.log(C + 1)
+                weights[idx] = 1.0 / np.sqrt(1)
 
         # Нормализуем веса, чтобы среднее было около 1.0
         weights = weights / np.mean(weights)
@@ -190,8 +190,8 @@ class PosDataloaders():
         train_sampler = DynamicLengthGroupedSampler(
             train_ds, 
             max_tokens=max_tokens, 
-            rare_threshold=50, 
-            oversample_factor=50
+            rare_threshold=200, 
+            oversample_factor=100
         )
         train_list_of_batches = list(train_sampler)
         random.shuffle(train_list_of_batches)
