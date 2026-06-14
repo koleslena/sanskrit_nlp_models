@@ -30,7 +30,8 @@ def load_tagger_model(path, device):
                                         embedding_size=config['emb_dim'], 
                                         hidden_dim=config['hidden_dim'],
                                         n_layers=config['n_layers'],
-                                        research_version=config.get('layer_norm', False))
+                                        research_version=config.get('layer_norm', False),
+                                        use_boundary_features=config.get('use_boundary_features', False))
     
     # 4. Загружаем веса в созданную модель
     model.load_state_dict(checkpoint['model_state_dict'])
@@ -95,7 +96,8 @@ def load_tagger_model_from_url(version, device, model_name=DEFAULT_TAGGER_MODEL_
                                         embedding_size=config['emb_dim'], 
                                         hidden_dim=config['hidden_dim'], 
                                         n_layers=config['n_layers'],
-                                        research_version=config.get('layer_norm', False))
+                                        research_version=config.get('layer_norm', False),
+                                        use_boundary_features=config.get('use_boundary_features', False))
 
     # 4. Загружаем веса в созданную модель
     model.load_state_dict(checkpoint['model_state_dict'])

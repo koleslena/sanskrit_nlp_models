@@ -204,6 +204,7 @@ class Trainer:
                 "hidden_dim": self.model.hidden_dim,
                 "n_layers": self.model.n_layers,
                 "layer_norm": self.model.layer_norm != None,
+                "use_boundary_features": self.model.use_boundary_features,
                 'release': self.release,
             }
         }

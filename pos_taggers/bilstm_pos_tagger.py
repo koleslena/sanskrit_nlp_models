@@ -24,13 +24,14 @@ class AttentionPooling(nn.Module):
         return weighted
 
 class BiLSTMTagger(nn.Module):
-    def __init__(self, vocab_size, labels_num, embedding_size, hidden_dim, n_layers, dropout, research_version=False):
+    def __init__(self, vocab_size, labels_num, embedding_size, hidden_dim, n_layers, dropout, research_version=False, use_boundary_features=False):
         super().__init__()
 
         self.labels_num = labels_num
         self.hidden_dim = hidden_dim
         self.embedding_size = embedding_size
         self.n_layers = n_layers
+        self.use_boundary_features = use_boundary_features
         
         # 1. Уровень букв (Морфология)
         self.char_embeddings = nn.Embedding(vocab_size, embedding_size)
@@ -43,6 +44,17 @@ class BiLSTMTagger(nn.Module):
         
         # Заменяем MaxPool на Attention
         self.char_attention = AttentionPooling(hidden_dim * 2)
+
+        # включает суффиксы и префиксы
+        if self.use_boundary_features:
+            self.feat_emb_dim = 32 
+            self.pref1_emb = nn.Embedding(vocab_size, self.feat_emb_dim, padding_idx=0)
+            self.pref2_emb = nn.Embedding(vocab_size, self.feat_emb_dim, padding_idx=0)
+            self.suff1_emb = nn.Embedding(vocab_size, self.feat_emb_dim, padding_idx=0)
+            self.suff2_emb = nn.Embedding(vocab_size, self.feat_emb_dim, padding_idx=0)
+            
+            extra_features_dim = 4 * self.feat_emb_dim
+            self.feature_mixing = nn.Linear(hidden_dim * 2 + extra_features_dim, hidden_dim * 2)
         
         # 2. Уровень предложения (Синтаксис и омонимы)
         # Входной размер равен выходу char_lstm после пуллинга (hidden_dim * 2)
@@ -91,6 +103,29 @@ class BiLSTMTagger(nn.Module):
         word_vectors = self.char_attention(char_feats, mask=char_mask)
         word_vectors = self.dropout(word_vectors)
 
+        # --- Применение фич по условию суффиксы и префиксы ---
+        if self.use_boundary_features:
+            N_flat = tokens_flat.size(0)
+            device = tokens.device
+            
+            p1 = tokens_flat[:, 0]
+            p2 = tokens_flat[:, 1] if max_token_len > 1 else torch.zeros_like(p1)
+            
+            idx_last = char_lengths - 1
+            idx_penultimate = (char_lengths - 2).clamp(min=0)
+            
+            s1 = tokens_flat[torch.arange(N_flat, device=device), idx_last]
+            s2 = tokens_flat[torch.arange(N_flat, device=device), idx_penultimate]
+            s2 = torch.where(char_lengths > 1, s2, torch.zeros_like(s2))
+            
+            p1_e = self.pref1_emb(p1)
+            p2_e = self.pref2_emb(p2)
+            s1_e = self.suff1_emb(s1)
+            s2_e = self.suff2_emb(s2)
+            
+            anchored_word_vectors = torch.cat([word_vectors, p1_e, p2_e, s1_e, s2_e], dim=-1)
+            word_vectors = self.feature_mixing(anchored_word_vectors)
+
         # --- ШАГ 2: Предложение с Residual ---
         sent_context = word_vectors.view(batch_size, max_sent_len, -1)
 
@@ -122,14 +157,15 @@ class BiLSTMTagger(nn.Module):
         # Возвращаем в формате (BatchSize, LabelsNum, MaxSentenceLen)
         return logits.permute(0, 2, 1)
 
-def get_model(vocab_size, labels_num, embedding_size=128, hidden_dim=256, n_layers=3, dropout=0.3, research_version=True):
+def get_model(vocab_size, labels_num, embedding_size=128, hidden_dim=256, n_layers=3, dropout=0.3, research_version=True, use_boundary_features=True):
     bilstm_pos_tagger_model = BiLSTMTagger(vocab_size,
                                         labels_num, 
                                         embedding_size=embedding_size,
                                         hidden_dim=hidden_dim,
                                         n_layers=n_layers, 
                                         dropout=dropout, 
-                                        research_version=research_version)
+                                        research_version=research_version,
+                                        use_boundary_features=use_boundary_features)
     print(f'BLSTM: vocab_size: {vocab_size}, labels_num: {labels_num}')
     print('Количество параметров', sum(np.prod(t.shape) for t in bilstm_pos_tagger_model.parameters()))
     return bilstm_pos_tagger_model
