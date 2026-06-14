@@ -40,7 +40,7 @@ def main():
     parser.add_argument("--model", type=str, default='bilstm') # bilstm, cnn
     parser.add_argument("--full_pos", type=bool, default=True)
     parser.add_argument("--with_metrics", type=bool, default=True)
-    parser.add_argument("--max_tokens_per_batch", type=int, default=12000)
+    parser.add_argument("--max_tokens_per_batch", type=int, default=18000)
     parser.add_argument("--model_name", type=str, default=None)
     parser.add_argument("--train_tuning", type=bool, default=False)
     args = parser.parse_args()
@@ -65,7 +65,7 @@ def main():
             model = bilstm_pos_tagger.get_model(datasets.vocab_size, datasets.labels_num, embedding_size=args.embedding_size)
 
         trainer = Trainer(datasets, model,
-                        FocalLoss(gamma=2, ignore_index=INDEX_PAD, weight=datasets.class_weights), 
+                        FocalLoss(gamma=1.5, ignore_index=INDEX_PAD, weight=datasets.class_weights), 
                         output_model_name=model_name, 
                         device=args.device,
                         with_metrics=args.with_metrics,
