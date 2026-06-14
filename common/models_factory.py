@@ -2,6 +2,8 @@ import pandas as pd
 import torch
 from torch.hub import load_state_dict_from_url
 
+import re
+
 from config import Config
 from pos_taggers import bilstm_pos_tagger
 from segmenter.segmenter import SanskritPointerSegmenter
@@ -13,7 +15,11 @@ with_all_bi = ['segmenter_model_1781067108.6164422',
                'segmenter_model_1781026960.6783192', 
                'segmenter_model_1781091384.9032512', 
                'segmenter_model_1781177574.6417813',
-               'segmenter_model_1781204808.2988951']
+               'segmenter_model_1781204808.2988951',
+               'segmenter_model_1781416737.5019588',
+               'segmenter_model_1781342500.4066458',
+               'segmenter_model_1781270562.565004',
+               'segmenter_model_1781237149.2671828']
 
 def load_tagger_model(path, device):
     # 1. Загружаем весь объект
@@ -51,17 +57,29 @@ def load_segmenter_model(path, device, all_bi=False):
     char2id = checkpoint['char2id']
     config = checkpoint['config']
     
+    state_dict = checkpoint['model_state_dict']
+
+    decoder_layer_indices = []
+    for key in state_dict.keys():
+        # Регулярка ищет число между 'decoder.lstms.' и следующим за ним элементом
+        match = re.match(r"decoder\.lstms\.(\d+)\.", key)
+        if match:
+            decoder_layer_indices.append(int(match.group(1)))
+    # Количество слоев — это максимальный индекс + 1
+    actual_decoder_layers = max(decoder_layer_indices) + 1
+
     # 3. Создаем экземпляр модели, используя сохраненный конфиг
     model = SanskritPointerSegmenter(len(char2id), 
                                      config['emb_dim'],
                                      device, 
                                      hidden_dim=config['hidden_dim'], 
                                      n_layers=config['n_layers'],
+                                     n_layers_dec=actual_decoder_layers,
                                      all_bi = all_bi,
                                      with_penalty=config.get('with_penalty', False))
     
     # 4. Загружаем веса в созданную модель
-    model.load_state_dict(checkpoint['model_state_dict'])
+    model.load_state_dict(state_dict)
     model.to(device)
 
     model.char2id = char2id
@@ -131,8 +149,19 @@ def load_segmenter_model_from_url(version, device, model_name=DEFAULT_SEGMENTER_
     char2id = checkpoint['char2id']
     config = checkpoint['config']
 
+    state_dict = checkpoint['model_state_dict']
+
     # TODO почему-то в весах длина словаря + 1, пока так, потом надо разобраться
-    saved_vocab_size = checkpoint['model_state_dict']['decoder.fc_out.weight'].shape[0]
+    saved_vocab_size = state_dict['decoder.fc_out.weight'].shape[0]
+
+    decoder_layer_indices = []
+    for key in state_dict.keys():
+        # Регулярка ищет число между 'decoder.lstms.' и следующим за ним элементом
+        match = re.match(r"decoder\.lstms\.(\d+)\.", key)
+        if match:
+            decoder_layer_indices.append(int(match.group(1)))
+    # Количество слоев — это максимальный индекс + 1
+    actual_decoder_layers = max(decoder_layer_indices) + 1
     
     # 3. Создаем экземпляр модели, используя сохраненный конфиг
     model = SanskritPointerSegmenter(saved_vocab_size, 
@@ -140,12 +169,13 @@ def load_segmenter_model_from_url(version, device, model_name=DEFAULT_SEGMENTER_
                                      device, 
                                      hidden_dim=config['hidden_dim'], 
                                      n_layers=config['n_layers'],
+                                     n_layers_dec=actual_decoder_layers,
                                      all_bi = all_bi,
                                      with_penalty=config.get('with_penalty', False))
 
     
     # 4. Загружаем веса в созданную модель
-    model.load_state_dict(checkpoint['model_state_dict'])
+    model.load_state_dict(state_dict)
     model.to(device)
 
     model.char2id = char2id
