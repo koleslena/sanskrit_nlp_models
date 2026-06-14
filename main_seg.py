@@ -54,7 +54,7 @@ def main():
             if len(model.char2id) != datasets.vocab_size:
                 raise ValueError("Размеры словарей данных и предобученной модели не совпадают!")
         else:
-            model = SanskritPointerSegmenter(datasets.get_vocab_size(), args.embedding_size, device, n_layers=2, all_bi=True).to(device)
+            model = SanskritPointerSegmenter(datasets.get_vocab_size(), args.embedding_size, device, n_layers=3, all_bi=True).to(device)
             
         trainer = SegmenterTrainer( datasets, 
                                     model,
