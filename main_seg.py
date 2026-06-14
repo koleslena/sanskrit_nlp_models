@@ -61,7 +61,7 @@ def main():
                                     # criterion=SegmenterFocalLoss(gamma=1, ignore_index=0),
                                     output_model_name=model_name, 
                                     device=device,
-                                    # lr=5e-4,
+                                    lr=1e-3,
                                     epoch_n=args.epoch_n,
                                     train_tuning=args.train_tuning,
                                     early_stopping_patience=20,
