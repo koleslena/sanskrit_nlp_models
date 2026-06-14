@@ -111,12 +111,13 @@ class BiLSTMTagger(nn.Module):
             p1 = tokens_flat[:, 0]
             p2 = tokens_flat[:, 1] if max_token_len > 1 else torch.zeros_like(p1)
             
-            idx_last = char_lengths - 1
-            idx_penultimate = (char_lengths - 2).clamp(min=0)
+            idx_last = (char_lengths - 1).to(device)
+            idx_penultimate = (char_lengths - 2).clamp(min=0).to(device)
             
             s1 = tokens_flat[torch.arange(N_flat, device=device), idx_last]
             s2 = tokens_flat[torch.arange(N_flat, device=device), idx_penultimate]
-            s2 = torch.where(char_lengths > 1, s2, torch.zeros_like(s2))
+            condition = (char_lengths > 1).to(device)
+            s2 = torch.where(condition, s2, torch.zeros_like(s2))
             
             p1_e = self.pref1_emb(p1)
             p2_e = self.pref2_emb(p2)
