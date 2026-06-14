@@ -65,11 +65,11 @@ def main():
             model = bilstm_pos_tagger.get_model(datasets.vocab_size, datasets.labels_num, embedding_size=args.embedding_size)
 
         trainer = Trainer(datasets, model,
-                        FocalLoss(gamma=1.2, ignore_index=INDEX_PAD, weight=datasets.class_weights), 
+                        FocalLoss(gamma=1.5, ignore_index=INDEX_PAD, weight=datasets.class_weights), 
                         output_model_name=model_name, 
                         device=args.device,
                         with_metrics=args.with_metrics,
-                        lr=1e-3,
+                        lr=5e-4,
                         epoch_n=args.epoch_n,
                         early_stopping_patience=20,
                         max_batches_per_epoch_train=args.max_batches_per_epoch_train,
