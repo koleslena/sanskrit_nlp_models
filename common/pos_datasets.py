@@ -191,7 +191,7 @@ class PosDataloaders():
             train_ds, 
             max_tokens=max_tokens, 
             rare_threshold=200, 
-            oversample_factor=20
+            oversample_factor=50
         )
         train_list_of_batches = list(train_sampler)
         random.shuffle(train_list_of_batches)
