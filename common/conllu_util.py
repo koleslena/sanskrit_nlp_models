@@ -1,6 +1,8 @@
 from conllu import parse
 import pandas as pd
 import os
+from itertools import product
+
 from indic_transliteration import sanscript
 from indic_transliteration.sanscript import transliterate
 
@@ -67,6 +69,27 @@ def clean_df(df):
     print(f"Удалено строк: {len(exclude_sent_id)} из {len(df)}")
     return df_clean
 
+def token_variants(token):
+    # 1. Выделяем основу (убираем первый символ и два последних)
+    # Для 'gacCati' -> 'acCat'
+    core = token[1:-2]
+
+    # 2. Определяем префиксы. 
+    # Для первой группы префиксом служит первый оригинальный символ токена
+    first_char = token[0] 
+    prefixes = [first_char, 'A', 'o', 'e', 'C', 'U', 'I']
+
+    # 3. Определяем суффиксы флексий (окончаний)
+    suffixes = ['ata ', 'atas', 'ato', 'ataS', 'ataz', 'ataH']
+
+    # 4. Генерируем весь массив в один проход
+    variants = [
+        f"{pref}{core}{suff}" 
+        for pref, suff in product(prefixes, suffixes)
+    ]
+
+    return variants
+
 def read_split_conllu_file(nfiles, transliterate=False):
     nsentences = []
 
@@ -92,8 +115,8 @@ def read_split_conllu_file(nfiles, transliterate=False):
             if str(token['id']).isdigit():
                 form  = token['form'] if len(token['form']) > 0 and token['form'] != '_' else token['lemma']
                 token_form = IASTToSlp(form) if transliterate else form
-                if with_tasil and token_form.endswith('At'):
-                    abls = set([token_form[:-2] + 'atas', token_form[:-2] + 'ato', token_form[:-2] + 'ataS', token_form[:-2] + 'ataH'])
+                if with_tasil and token_form.endswith('At') and token['upos'] in ['NOUN', 'ADJ', 'NUM', 'PRON']:
+                    abls = set(token_variants(token_form))
                     found = [a for a in abls if a in text]
                     if len(found) > 0:
                         token_form = token_form[:-2] + 'ataH'
@@ -101,6 +124,14 @@ def read_split_conllu_file(nfiles, transliterate=False):
                 all_tokens.append(token_form)
                 all_tokens.append("-" if token['feats'] == {'Case': 'Cpd'} else " ")
         sent = ''.join(all_tokens[:-1])
+        
+        if sentence.metadata['sent_id'] == '62444':
+            sent = sent.replace('SaktyAH', 'SaktitaH').replace('vayasaH', 'vayastaH')
+        if sentence.metadata['sent_id'] == '298642':
+            sent = sent.replace('nitya-tvataH', 'nitya-tvAt')
+        if sentence.metadata['sent_id'] == '536902':
+            sent = sent.replace('svAtantrya-sAra-tvataH', 'svAtantrya-sAra-tvAt')
+        
         splited.append(sent)
 
     data = {
