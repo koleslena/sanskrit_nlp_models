@@ -19,7 +19,8 @@ with_all_bi = ['segmenter_model_1781067108.6164422',
                'segmenter_model_1781416737.5019588',
                'segmenter_model_1781342500.4066458',
                'segmenter_model_1781270562.565004',
-               'segmenter_model_1781237149.2671828']
+               'segmenter_model_1781237149.2671828',
+               'segmenter_model_1781475315.064929']
 
 def load_tagger_model(path, device):
     # 1. Загружаем весь объект
@@ -56,17 +57,20 @@ def load_segmenter_model(path, device, all_bi=False):
     # 2. Извлекаем словари
     char2id = checkpoint['char2id']
     config = checkpoint['config']
+    n_layers_dec = config.get('n_layers_dec', -1)
+    enc_all_bi = config.get('enc_all_bi', all_bi)
     
     state_dict = checkpoint['model_state_dict']
 
-    decoder_layer_indices = []
-    for key in state_dict.keys():
-        # Регулярка ищет число между 'decoder.lstms.' и следующим за ним элементом
-        match = re.match(r"decoder\.lstms\.(\d+)\.", key)
-        if match:
-            decoder_layer_indices.append(int(match.group(1)))
-    # Количество слоев — это максимальный индекс + 1
-    actual_decoder_layers = max(decoder_layer_indices) + 1
+    if n_layers_dec == -1:
+        decoder_layer_indices = []
+        for key in state_dict.keys():
+            # Регулярка ищет число между 'decoder.lstms.' и следующим за ним элементом
+            match = re.match(r"decoder\.lstms\.(\d+)\.", key)
+            if match:
+                decoder_layer_indices.append(int(match.group(1)))
+        # Количество слоев — это максимальный индекс + 1
+        n_layers_dec = max(decoder_layer_indices) + 1
 
     # 3. Создаем экземпляр модели, используя сохраненный конфиг
     model = SanskritPointerSegmenter(len(char2id), 
@@ -74,8 +78,8 @@ def load_segmenter_model(path, device, all_bi=False):
                                      device, 
                                      hidden_dim=config['hidden_dim'], 
                                      n_layers=config['n_layers'],
-                                     n_layers_dec=actual_decoder_layers,
-                                     all_bi = all_bi,
+                                     n_layers_dec=n_layers_dec,
+                                     all_bi = enc_all_bi,
                                      with_penalty=config.get('with_penalty', False))
     
     # 4. Загружаем веса в созданную модель
@@ -148,20 +152,23 @@ def load_segmenter_model_from_url(version, device, model_name=DEFAULT_SEGMENTER_
     # 2. Извлекаем словари
     char2id = checkpoint['char2id']
     config = checkpoint['config']
+    n_layers_dec = config.get('n_layers_dec', -1)
+    enc_all_bi = config.get('enc_all_bi', all_bi)
 
     state_dict = checkpoint['model_state_dict']
 
     # TODO почему-то в весах длина словаря + 1, пока так, потом надо разобраться
     saved_vocab_size = state_dict['decoder.fc_out.weight'].shape[0]
 
-    decoder_layer_indices = []
-    for key in state_dict.keys():
-        # Регулярка ищет число между 'decoder.lstms.' и следующим за ним элементом
-        match = re.match(r"decoder\.lstms\.(\d+)\.", key)
-        if match:
-            decoder_layer_indices.append(int(match.group(1)))
-    # Количество слоев — это максимальный индекс + 1
-    actual_decoder_layers = max(decoder_layer_indices) + 1
+    if n_layers_dec == -1:
+        decoder_layer_indices = []
+        for key in state_dict.keys():
+            # Регулярка ищет число между 'decoder.lstms.' и следующим за ним элементом
+            match = re.match(r"decoder\.lstms\.(\d+)\.", key)
+            if match:
+                decoder_layer_indices.append(int(match.group(1)))
+        # Количество слоев — это максимальный индекс + 1
+        n_layers_dec = max(decoder_layer_indices) + 1
     
     # 3. Создаем экземпляр модели, используя сохраненный конфиг
     model = SanskritPointerSegmenter(saved_vocab_size, 
@@ -169,8 +176,8 @@ def load_segmenter_model_from_url(version, device, model_name=DEFAULT_SEGMENTER_
                                      device, 
                                      hidden_dim=config['hidden_dim'], 
                                      n_layers=config['n_layers'],
-                                     n_layers_dec=actual_decoder_layers,
-                                     all_bi = all_bi,
+                                     n_layers_dec=n_layers_dec,
+                                     all_bi = enc_all_bi,
                                      with_penalty=config.get('with_penalty', False))
 
     
