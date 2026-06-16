@@ -65,7 +65,7 @@ def main():
             model = bilstm_pos_tagger.get_model(datasets.vocab_size, datasets.labels_num, embedding_size=args.embedding_size)
 
         trainer = Trainer(datasets, model,
-                        FocalLoss(gamma=1.5, ignore_index=INDEX_PAD, weight=datasets.class_weights), 
+                        FocalLoss(gamma=2, ignore_index=INDEX_PAD), 
                         output_model_name=model_name, 
                         device=args.device,
                         with_metrics=args.with_metrics,
