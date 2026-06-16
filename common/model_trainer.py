@@ -205,6 +205,7 @@ class Trainer:
                 "n_layers": self.model.n_layers,
                 "layer_norm": self.model.layer_norm != None,
                 "use_boundary_features": self.model.use_boundary_features,
+                "use_char_cnn": self.model.use_char_cnn,
                 'release': self.release,
             }
         }

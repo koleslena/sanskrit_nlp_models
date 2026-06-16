@@ -24,7 +24,8 @@ class AttentionPooling(nn.Module):
         return weighted
 
 class BiLSTMTagger(nn.Module):
-    def __init__(self, vocab_size, labels_num, embedding_size, hidden_dim, n_layers, dropout, research_version=False, use_boundary_features=False):
+    def __init__(self, vocab_size, labels_num, embedding_size, hidden_dim, n_layers, dropout, 
+                 research_version=False, use_boundary_features=False, use_char_cnn=False):
         super().__init__()
 
         self.labels_num = labels_num
@@ -32,7 +33,8 @@ class BiLSTMTagger(nn.Module):
         self.embedding_size = embedding_size
         self.n_layers = n_layers
         self.use_boundary_features = use_boundary_features
-        
+        self.use_char_cnn = use_char_cnn
+
         # 1. Уровень букв (Морфология)
         self.char_embeddings = nn.Embedding(vocab_size, embedding_size)
         self.char_lstm = nn.LSTM(embedding_size, 
@@ -55,6 +57,18 @@ class BiLSTMTagger(nn.Module):
             
             extra_features_dim = 4 * self.feat_emb_dim
             self.feature_mixing = nn.Linear(hidden_dim * 2 + extra_features_dim, hidden_dim * 2)
+
+        # Параллельная символьная CNN для детекции корней
+        if self.use_char_cnn:
+            self.cnn_channels = 64
+            # Свертки с окнами в 3, 4 и 5 букв
+            self.convs = nn.ModuleList([
+                nn.Conv1d(in_channels=embedding_size, out_channels=self.cnn_channels, kernel_size=k, padding=k//2)
+                for k in [3, 4, 5]
+            ])
+            # Слой проекции склеенных фич (LSTM + CNN) обратно в пространство предложения
+            total_char_dim = (hidden_dim * 2) + (self.cnn_channels * 3)
+            self.char_projection = nn.Linear(total_char_dim, hidden_dim * 2)
         
         # 2. Уровень предложения (Синтаксис и омонимы)
         # Входной размер равен выходу char_lstm после пуллинга (hidden_dim * 2)
@@ -101,6 +115,22 @@ class BiLSTMTagger(nn.Module):
         
         # Используем Attention вместо GlobalPooling
         word_vectors = self.char_attention(char_feats, mask=char_mask)
+
+        if self.use_char_cnn:
+            # Переставляем размерности для Conv1D: (N_flat, embedding_size, max_token_len)
+            cnn_input = char_embs.permute(0, 2, 1)
+            cnn_outputs = []
+            for conv in self.convs:
+                c_out = F.relu(conv(cnn_input))
+                # Глобальный Max-Pooling по длине слова (независим от паддингов благодаря свертке с набором фильтров)
+                c_max, _ = torch.max(c_out, dim=-1)
+                cnn_outputs.append(c_max)
+            
+            cnn_feats = torch.cat(cnn_outputs, dim=-1) # (N_flat, cnn_channels * 3)
+            # Объединяем глобальный контекст LSTM и n-граммы CNN
+            combined_char_feats = torch.cat([word_vectors, cnn_feats], dim=-1)
+            word_vectors = self.char_projection(combined_char_feats)
+        
         word_vectors = self.dropout(word_vectors)
 
         # --- Применение фич по условию суффиксы и префиксы ---
@@ -158,7 +188,8 @@ class BiLSTMTagger(nn.Module):
         # Возвращаем в формате (BatchSize, LabelsNum, MaxSentenceLen)
         return logits.permute(0, 2, 1)
 
-def get_model(vocab_size, labels_num, embedding_size=128, hidden_dim=256, n_layers=3, dropout=0.3, research_version=True, use_boundary_features=True):
+def get_model(vocab_size, labels_num, embedding_size=128, hidden_dim=256, n_layers=3, dropout=0.3, research_version=True, 
+              use_boundary_features=True, use_char_cnn=False):
     bilstm_pos_tagger_model = BiLSTMTagger(vocab_size,
                                         labels_num, 
                                         embedding_size=embedding_size,
@@ -166,7 +197,8 @@ def get_model(vocab_size, labels_num, embedding_size=128, hidden_dim=256, n_laye
                                         n_layers=n_layers, 
                                         dropout=dropout, 
                                         research_version=research_version,
-                                        use_boundary_features=use_boundary_features)
+                                        use_boundary_features=use_boundary_features,
+                                        use_char_cnn=use_char_cnn)
     print(f'BLSTM: vocab_size: {vocab_size}, labels_num: {labels_num}')
     print('Количество параметров', sum(np.prod(t.shape) for t in bilstm_pos_tagger_model.parameters()))
     return bilstm_pos_tagger_model

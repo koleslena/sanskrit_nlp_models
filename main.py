@@ -62,7 +62,8 @@ def main():
             if len(model.char2id) != datasets.vocab_size or len(model.unique_tags) != datasets.labels_num:
                 raise ValueError("Размеры словарей данных и предобученной модели не совпадают!")
         else:
-            model = bilstm_pos_tagger.get_model(datasets.vocab_size, datasets.labels_num, embedding_size=args.embedding_size)
+            model = bilstm_pos_tagger.get_model(datasets.vocab_size, datasets.labels_num, embedding_size=args.embedding_size,
+                                                use_boundary_features=False, use_char_cnn=True)
 
         trainer = Trainer(datasets, model,
                         FocalLoss(gamma=2, ignore_index=INDEX_PAD), 
