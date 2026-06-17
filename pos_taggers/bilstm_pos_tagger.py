@@ -60,7 +60,7 @@ class BiLSTMTagger(nn.Module):
 
         # Параллельная символьная CNN для детекции корней
         if self.use_char_cnn:
-            self.cnn_channels = 64
+            self.cnn_channels = 128
             # Свертки с окнами в 3, 4 и 5 букв
             self.convs = nn.ModuleList([
                 nn.Conv1d(in_channels=embedding_size, out_channels=self.cnn_channels, kernel_size=k, padding=k//2)
@@ -69,6 +69,8 @@ class BiLSTMTagger(nn.Module):
             # Слой проекции склеенных фич (LSTM + CNN) обратно в пространство предложения
             total_char_dim = (hidden_dim * 2) + (self.cnn_channels * 3)
             self.char_projection = nn.Linear(total_char_dim, hidden_dim * 2)
+        else:
+            self.cnn_channels = None
         
         # 2. Уровень предложения (Синтаксис и омонимы)
         # Входной размер равен выходу char_lstm после пуллинга (hidden_dim * 2)
@@ -188,7 +190,7 @@ class BiLSTMTagger(nn.Module):
         # Возвращаем в формате (BatchSize, LabelsNum, MaxSentenceLen)
         return logits.permute(0, 2, 1)
 
-def get_model(vocab_size, labels_num, embedding_size=128, hidden_dim=256, n_layers=3, dropout=0.3, research_version=True, 
+def get_model(vocab_size, labels_num, embedding_size=64, hidden_dim=256, n_layers=3, dropout=0.3, research_version=True, 
               use_boundary_features=True, use_char_cnn=False):
     bilstm_pos_tagger_model = BiLSTMTagger(vocab_size,
                                         labels_num, 
