@@ -25,7 +25,7 @@ class AttentionPooling(nn.Module):
 
 class BiLSTMTagger(nn.Module):
     def __init__(self, vocab_size, labels_num, embedding_size, hidden_dim, n_layers, dropout, 
-                 research_version=False, use_boundary_features=False, use_char_cnn=False):
+                 research_version=False, use_boundary_features=False, use_char_cnn=False, cnn_channels=64):
         super().__init__()
 
         self.labels_num = labels_num
@@ -60,7 +60,7 @@ class BiLSTMTagger(nn.Module):
 
         # Параллельная символьная CNN для детекции корней
         if self.use_char_cnn:
-            self.cnn_channels = 128
+            self.cnn_channels = cnn_channels
             # Свертки с окнами в 3, 4 и 5 букв
             self.convs = nn.ModuleList([
                 nn.Conv1d(in_channels=embedding_size, out_channels=self.cnn_channels, kernel_size=k, padding=k//2)
@@ -191,7 +191,7 @@ class BiLSTMTagger(nn.Module):
         return logits.permute(0, 2, 1)
 
 def get_model(vocab_size, labels_num, embedding_size=64, hidden_dim=256, n_layers=3, dropout=0.3, research_version=True, 
-              use_boundary_features=True, use_char_cnn=False):
+              use_boundary_features=True, use_char_cnn=False, cnn_channels=64):
     bilstm_pos_tagger_model = BiLSTMTagger(vocab_size,
                                         labels_num, 
                                         embedding_size=embedding_size,
@@ -200,7 +200,8 @@ def get_model(vocab_size, labels_num, embedding_size=64, hidden_dim=256, n_layer
                                         dropout=dropout, 
                                         research_version=research_version,
                                         use_boundary_features=use_boundary_features,
-                                        use_char_cnn=use_char_cnn)
+                                        use_char_cnn=use_char_cnn,
+                                        cnn_channels=cnn_channels)
     print(f'BLSTM: vocab_size: {vocab_size}, labels_num: {labels_num}')
     print('Количество параметров', sum(np.prod(t.shape) for t in bilstm_pos_tagger_model.parameters()))
     return bilstm_pos_tagger_model
