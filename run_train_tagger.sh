@@ -10,4 +10,4 @@ nvidia-smi > train_log.txt
 
 # Запуск. Флаг -u (unbuffered) нужен, чтобы принты 
 # попадали в файл моментально, а не копились в буфере.
-python -u main_seg.py 2>&1 | tee -a train_log.txt
+python -u main.py --epoch_n 200 2>&1 | tee -a train_log.txt
